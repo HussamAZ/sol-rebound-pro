@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="ar">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>SOL Rebound</title>
+  <link rel="icon" href="/favicon.png" type="image/png" />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@100;200;300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+
+  <!-- link rel="stylesheet" href="styles.css" -->
+  
+  <!-- مكتبة three.js -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+</head>
+
+<body>
+  <!-- خلفية الشبكة ثلاثية الأبعاد -->
+  <div class="grid-container">
+    <div class="grid"></div>
+  </div>
+
+  <!-- تغليف المشهد ثلاثي الأبعاد -->
+  <div class="scene-wrapper">
+    <div class="scene">
+      <!-- المجموعات الثلاث (A, B, C) كما هو في التصميم -->
+      <div class="group groupA">
+        <!-- المكعبات والنبضات للمجموعة A -->
+        <div class="cube cube1A">
+          <div class="face face1"></div>
+          <div class="face face2"></div>
+          <div class="face face3"></div>
+          <div class="face face4"></div>
+          <div class="face face5"></div>
+          <div class="face face6"></div>
+        </div>
+        <div class="cube cube2A">
+          <div class="face face1"></div>
+          <div class="face face2"></div>
+          <div class="face face3"></div>
+          <div class="face face4"></div>
+          <div class="face face5"></div>
+          <div class="face face6"></div>
+        </div>
+        <div class="cube cube3A">
+          <div class="face face1"></div>
+          <div class="face face2"></div>
+          <div class="face face3"></div>
+          <div class="face face4"></div>
+          <div class="face face5"></div>
+          <div class="face face6"></div>
+        </div>
+        <div class="line line1A">
+          <div class="pulse pulse1A"></div>
+        </div>
+        <div class="line line2A">
+          <div class="pulse pulse2A"></div>
+        </div>
+        <div class="line line3A">
+          <div class="pulse pulse3A"></div>
+        </div>
+      </div>
+
+      <div class="group groupB">
+        <!-- المكعبات والنبضات للمجموعة B -->
+        <div class="cube cube1B">
+          <div class="face face1"></div>
+          <div class="face face2"></div>
+          <div class="face face3"></div>
+          <div class="face face4"></div>
+          <div class="face face5"></div>
+          <div class="face face6"></div>
+        </div>
+        <div class="cube cube2B">
+          <div class="face face1"></div>
+          <div class="face face2"></div>
+          <div class="face face3"></div>
+          <div class="face face4"></div>
+          <div class="face face5"></div>
+          <div class="face face6"></div>
+        </div>
+        <div class="cube cube3B">
+          <div class="face face1"></div>
+          <div class="face face2"></div>
+          <div class="face face3"></div>
+          <div class="face face4"></div>
+          <div class="face face5"></div>
+          <div class="face face6"></div>
+        </div>
+        <div class="line line1B">
+          <div class="pulse pulse1B"></div>
+        </div>
+        <div class="line line2B">
+          <div class="pulse pulse2B"></div>
+        </div>
+        <div class="line line3B">
+          <div class="pulse pulse3B"></div>
+        </div>
+      </div>
+
+      <div class="group groupC">
+        <!-- المكعبات والنبضات للمجموعة C -->
+        <div class="cube cube1C">
+          <div class="face face1"></div>
+          <div class="face face2"></div>
+          <div class="face face3"></div>
+          <div class="face face4"></div>
+          <div class="face face5"></div>
+          <div class="face face6"></div>
+        </div>
+        <div class="cube cube2C">
+          <div class="face face1"></div>
+          <div class="face face2"></div>
+          <div class="face face3"></div>
+          <div class="face face4"></div>
+          <div class="face face5"></div>
+          <div class="face face6"></div>
+        </div>
+        <div class="cube cube3C">
+          <div class="face face1"></div>
+          <div class="face face2"></div>
+          <div class="face face3"></div>
+          <div class="face face4"></div>
+          <div class="face face5"></div>
+          <div class="face face6"></div>
+        </div>
+        <div class="line line1C">
+          <div class="pulse pulse1C"></div>
+        </div>
+        <div class="line line2C">
+          <div class="pulse pulse2C"></div>
+        </div>
+        <div class="line line3C">
+          <div class="pulse pulse3C"></div>
+        </div>
+      </div>
+      
+      <div class="group groupA mobile-clone mobile-clone-top"> <!-- فئات جديدة -->
+        <div class="cube cube1A">
+          <div class="face face1"></div><div class="face face2"></div><div class="face face3"></div><div class="face face4"></div><div class="face face5"></div><div class="face face6"></div>
+        </div>
+        <div class="cube cube2A">
+          <div class="face face1"></div><div class="face face2"></div><div class="face face3"></div><div class="face face4"></div><div class="face face5"></div><div class="face face6"></div>
+        </div>
+        <div class="cube cube3A">
+          <div class="face face1"></div><div class="face face2"></div><div class="face face3"></div><div class="face face4"></div><div class="face face5"></div><div class="face face6"></div>
+        </div>
+        <div class="line line1A"><div class="pulse pulse1A"></div></div>
+        <div class="line line2A"><div class="pulse pulse2A"></div></div>
+        <div class="line line3A"><div class="pulse pulse3A"></div></div>
+      </div>
+      <div class="group groupC mobile-clone mobile-clone-bottom"> <!-- استخدام مجموعة C كمثال للأسفل -->
+        <div class="cube cube1C">
+          <div class="face face1"></div><div class="face face2"></div><div class="face face3"></div><div class="face face4"></div><div class="face face5"></div><div class="face face6"></div>
+       </div>
+       <div class="cube cube2C">
+          <div class="face face1"></div><div class="face face2"></div><div class="face face3"></div><div class="face face4"></div><div class="face face5"></div><div class="face face6"></div>
+       </div>
+       <div class="cube cube3C">
+          <div class="face face1"></div><div class="face face2"></div><div class="face face3"></div><div class="face face4"></div><div class="face face5"></div><div class="face face6"></div>
+       </div>
+       <div class="line line1C"><div class="pulse pulse1C"></div></div>
+       <div class="line line2C"><div class="pulse pulse2C"></div></div>
+       <div class="line line3C"><div class="pulse pulse3C"></div></div>
+     </div>
+    </div>
+  </div>
+
+  <!-- عنصر root لتطبيق React، موضوع فوق الخلفية -->
+  <div id="root" style="position: relative; z-index: 10;"></div>
+  
+</body>
+</html>

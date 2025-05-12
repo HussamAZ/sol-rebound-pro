@@ -1,0 +1,314 @@
+/* src/components/Header/Header.module.css */
+
+/* لا نحتاج .headerContainer هنا لأنه معرف كـ .glass-effect.container */
+/* سنضيف فئة عامة له إذا لزم الأمر لاحقًا */
+
+.header {
+  display: flex;
+  flex-direction: row;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+  margin: 1rem;
+  /* استخدم الحشو من الفئة العامة .glass-effect.container */
+  /* padding: 0.5rem; */
+}
+
+.leftSection {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  min-width: 100px;
+}
+
+.centerSection {
+  flex: 1;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-width: 150px;
+}
+
+.rightSection {
+  flex: 1;
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 0.5rem;
+  min-width: 150px;
+}
+
+.projectLogo {
+  width: 90px;
+  height: auto;
+  
+}
+
+.connectWalletButton {
+  background: linear-gradient(25deg, #c773f2, #004080);
+  border: none;
+  border-radius: 20px;
+  color: #fff;
+  font-size: 0.9rem;
+  text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.5);
+  cursor: pointer;
+  transition: background 0.3s ease, transform 0.3s ease;
+  padding: 8px 18px;
+  white-space: nowrap;
+}
+
+.connectWalletButton:hover {
+  background: linear-gradient(25deg, #004080, #c773f2);
+  transform: scale(1.05);
+  color: #93fc8b;
+}
+
+.walletInfo {
+  text-align: center;
+  display: flex;
+  flex-direction: row; /* إبقاء العنوان بجانب الرصيد */
+  align-items: center;
+  color: #ffffff;
+  gap: 5px; /* مسافة بين العنوان والرصيد */
+}
+
+.walletInfo span:first-child { /* العنوان */
+  color: #c7ffb8;
+  font-weight: bold;
+  font-size: 0.9em;
+}
+.walletInfo span:last-child { /* العنوان المختصر */
+    font-family: 'monospace', sans-serif;
+    font-size: 0.9em;
+    background-color: rgba(0, 0, 0, 0.2);
+    padding: 2px 5px;
+    border-radius: 4px;
+}
+
+
+.disconnectButton {
+  background: #ff4d4d;
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: background 0.3s ease, transform 0.3s ease;
+  padding: 8px 16px;
+  white-space: nowrap;
+}
+
+.disconnectButton:hover {
+  background: #e60000;
+  transform: scale(1.05);
+}
+
+/* --- Media Queries الخاصة بالهيدر --- */
+/* تم نقلها من styles.css الأصلي وتعديل أسماء الفئات */
+@media (max-width: 768px) { /* كان 1024px، 768 أكثر شيوعًا للالتفاف */
+  .header {
+    flex-direction: column;
+    align-items: center; /* توسيط العناصر عند الالتفاف */
+    gap: 0.8rem;
+  }
+  .leftSection, .centerSection, .rightSection {
+    flex: none; /* إلغاء flex */
+    width: auto; /* السماح للمحتوى بتحديد العرض */
+    justify-content: center;
+    text-align: center;
+    margin-bottom: 0.5rem; /* إضافة مسافة سفلية */
+  }
+  /* تعديل الهامش لزر الفصل */
+  .rightSection .disconnectButton {
+      margin-top: 0.5rem;
+  }
+  .projectLogo {
+    margin: 0 auto 0.5rem auto;
+  }
+}
+
+@media (max-width: 600px) {
+   /* أنماط الهيدر للشاشات الصغيرة جدًا (إذا لزم الأمر) */
+   .connectWalletButton, .disconnectButton {
+        font-size: 0.85rem;
+        padding: 7px 15px;
+   }
+   .projectLogo {
+        width: 70px;
+        
+   }
+}
+
+/* الأنماط الخاصة برسائل الخطأ والنجاح (يمكن جعلها مكونًا منفصلاً لاحقًا) */
+.errorMessage { /* استخدام camelCase أكثر شيوعًا في CSS Modules */
+    color: #ff4d4d;
+    text-align: center;
+    margin-top: 10px;
+    padding: 0 1rem;
+    font-size: 0.9em;
+}
+.successMessage {
+    color: #93fc8b;
+    text-align: center;
+    margin-top: 10px;
+    word-break: break-all;
+    padding: 0 1rem;
+    font-size: 0.9em;
+}
+.successMessage a {
+    color: #93fc8b !important; /* تأكيد اللون */
+    text-decoration: underline;
+}
+/* ... (الأنماط الأخرى للهيدر) ... */
+
+/* --- أنماط تحذير الموبايل --- */
+.mobileWarningContainer {
+  background-color: #fffae6; /* خلفية صفراء فاتحة للتحذير */
+  color: #856404; /* لون نص داكن */
+  border: 1px solid #ffeeba; /* حد أصفر */
+  border-radius: 8px;
+  padding: 1rem;
+  margin: 15px auto; /* هامش ليفصله عن الهيدر والمحتوى */
+  max-width: 90%; /* تحديد عرض أقصى */
+  width: fit-content; /* جعل العرض يناسب المحتوى */
+  text-align: center;
+  font-size: 0.95em;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  z-index: 100; /* تأكد من أنه فوق العناصر الأخرى إذا لزم الأمر */
+}
+
+.mobileWarningContainer p {
+    margin: 0 0 10px 0; /* تعديل الهامش الداخلي للفقرة */
+}
+
+.mobileWarningContainer strong {
+    font-weight: bold;
+}
+
+.openInPhantomButton {
+    background-color: #856404;
+    color: white;
+    border: none;
+    padding: 8px 15px;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 0.9em;
+    transition: background-color 0.2s ease;
+}
+
+.openInPhantomButton:hover {
+    background-color: #664d03;
+}
+
+.errorMessage { /* استخدام camelCase أكثر شيوعًا في CSS Modules */
+    color: #ff4d4d;
+    text-align: center;
+    margin-top: 10px;
+    padding: 0 1rem;
+    font-size: 0.9em;
+}
+.successMessage {
+    color: #93fc8b;
+    text-align: center;
+    margin-top: 10px;
+    word-break: break-all;
+    padding: 0 1rem;
+    font-size: 0.9em;
+}
+.successMessage a {
+    color: #93fc8b !important; /* تأكيد اللون */
+    text-decoration: underline;
+}
+
+/* --- أنماط إرشادات الموبايل وزر فانتوم --- */
+.mobileGuidanceContainer { /* تم تغيير الاسم من mobileWarningContainer */
+  background-color: rgba(78, 52, 128, 0.85); /* لون بنفسجي داكن شفاف قليلاً - قريب من فانتوم */
+  color: #f0f0f0; /* لون نص فاتح */
+  border: 1px solid rgba(167, 139, 250, 0.5); /* حد بنفسجي فاتح */
+  border-radius: 8px;
+  padding: 1rem 1.5rem;
+  margin: 15px auto;
+  max-width: 600px; /* عرض مناسب للإرشاد */
+  width: 90%;
+  text-align: center;
+  font-size: 0.95em;
+  box-shadow: 0 3px 8px rgba(0,0,0,0.2);
+  z-index: 100; /* لضمان ظهوره فوق عناصر أخرى إذا لزم الأمر */
+}
+
+.mobileWarningText { /* فئة جديدة لنص التحذير */
+    margin: 0 0 12px 0;
+    line-height: 1.5;
+}
+
+.mobileWarningText strong {
+    font-weight: bold;
+    color: #d1c4e9; /* لون بنفسجي أفتح قليلاً للنص العريض */
+}
+
+.openInPhantomButton {
+  display: inline-block; /* ليتناسب مع text-align: center للحاوية */
+  margin-top: 10px;
+  padding: 10px 20px; /* زيادة الحشو قليلاً */
+  cursor: pointer;
+  background: linear-gradient(135deg, #a77ef4, #7b1fa2); /* تدرج بنفسجي مشابه لفانتوم */
+  color: white;
+  border: none;
+  border-radius: 25px; /* حواف دائرية أكثر */
+  font-size: 1em; /* حجم خط أوضح */
+  font-weight: bold;
+  transition: background 0.3s ease, transform 0.2s ease;
+  box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+}
+
+.openInPhantomButton:hover {
+  background: linear-gradient(135deg, #7b1fa2, #a77ef4);
+  transform: scale(1.03);
+}
+
+.manualStepsText {
+  font-size: 0.9em;
+  color: #e0e0e0; /* لون أفتح قليلاً من النص الرئيسي */
+  margin-top: 15px; /* مسافة فوق الخطوات اليدوية */
+  margin-bottom: 8px;
+  line-height: 1.6;
+  text-align: left; /* محاذاة الخطوات لليسار لسهولة القراءة */
+  padding-left: 10px; /* حشو بسيط لتمييز القائمة */
+}
+
+.copyLinkContainer {
+  display: flex;
+  align-items: center;
+  margin-top: 5px;
+  width: 100%;
+}
+
+.urlInputForCopy {
+  flex-grow: 1;
+  padding: 8px 10px;
+  font-size: 0.85em;
+  border: 1px solid rgba(167, 139, 250, 0.4); /* حد بنفسجي فاتح */
+  border-radius: 4px 0 0 4px; /* حواف لليسار فقط */
+  background-color: rgba(255, 255, 255, 0.1);
+  color: #f0f0f0;
+  overflow: hidden;      /* لإخفاء النص الطويل */
+  text-overflow: ellipsis; /* لعرض "..." للنص الطويل */
+  white-space: nowrap;   /* لمنع التفاف النص */
+}
+
+.copyUrlButton {
+  padding: 8px 15px;
+  font-size: 0.85em;
+  background-color: #805ad5; /* لون بنفسجي أغمق قليلاً من زر الفتح الرئيسي */
+  color: white;
+  border: 1px solid rgba(167, 139, 250, 0.4);
+  border-left: none; /* إزالة الحد الأيسر ليدمج مع حقل الإدخال */
+  border-radius: 0 4px 4px 0; /* حواف لليمين فقط */
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+  white-space: nowrap;
+}
+
+.copyUrlButton:hover {
+  background-color: #6b46c1;
+}

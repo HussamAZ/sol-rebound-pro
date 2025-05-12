@@ -1,0 +1,209 @@
+/* src/index.css */
+
+/* =====================================================
+   1. الإعدادات الأساسية Reset & Body Styles
+===================================================== */
+html {
+    box-sizing: border-box;
+  }
+  
+  *, *::before, *::after {
+    box-sizing: inherit;
+  }
+  
+  body {
+    margin: 0;
+    padding: 0;
+    font-family: 'Space Grotesk', sans-serif;
+    background: linear-gradient(135deg, #0f1018, #0f1b2a, #3b1b38);
+    background-size: 400% 400%;
+    animation: gradientBG 20s ease infinite;
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+    position: relative; /* مهم للخلفية المطلقة */
+    overflow-x: hidden; /* منع التمرير الأفقي */
+  }
+  
+  @keyframes gradientBG {
+    0%   { background-position: 0% 50%; }
+    50%  { background-position: 100% 50%; }
+    100% { background-position: 0% 50%; }
+  }
+  
+  /* =====================================================
+     2. النمط الأساسي للحاويات الزجاجية المشتركة
+  ===================================================== */
+  .glass-effect.container {
+    background: rgba(135, 245, 255, 0.044);
+    color: #fffd7b; /* اللون الافتراضي للنص داخل الحاويات */
+    backdrop-filter: blur(5px);
+    border-radius: 15px;
+    border: 1px solid rgba(247, 73, 253, 0.27);
+    max-width: 1400px; /* العرض الأقصى للحاويات */
+    font-size: 1.1rem; /* حجم الخط الافتراضي داخل الحاويات */
+    z-index: 10; /* فوق الخلفية */
+    margin-left: auto; /* توسيط الحاويات */
+    margin-right: auto;
+    width: 90%; /* عرض افتراضي لمعظم الشاشات */
+  }
+  
+  /* تعديل الهوامش بين الحاويات */
+  .glass-effect.container {
+      margin-top: 20px;
+      margin-bottom: 20px;
+  }
+  /* يمكن إزالة margin-top للحاوية الأولى إذا التصقت بالهيدر */
+  /* يمكنك استهداف حاوية معينة لتغيير الهامش إذا لزم الأمر */
+  
+  
+  /* =====================================================
+     3. فئات مساعدة عامة
+  ===================================================== */
+  .gradient-text-bold {
+    background: linear-gradient(90deg, #60efff, #a77ef4, #f9a8d4, #fde047, #6ee7b7, #86efac);
+    background-clip: text;
+    -webkit-background-clip: text;
+    color: transparent;
+    font-weight: 700;
+  }
+  
+  .text-bold {
+      font-weight: 700;
+  }
+  
+  /* فئات للألوان الشائعة (اختياري) */
+  .text-success { color: #93fc8b; }
+  .text-warning { color: #ffcc00; }
+  .text-error   { color: #ff6b6b; }
+  .text-info    { color: #87CEFA; }
+  .text-highlight { color: #ddfcb3; }
+  .text-muted   { color: #aaa; }
+  
+  
+  /* =====================================================
+     4. إعدادات المشهد ثلاثي الأبعاد (الخلفية المتحركة)
+  ===================================================== */
+  .scene-wrapper {
+    position: fixed; /* يبقى ثابتًا في الخلفية */
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: -1; /* خلف كل المحتوى */
+    overflow: hidden; /* إخفاء أي تجاوز */
+  }
+  
+  .grid-container {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    perspective: 800px;
+    overflow: hidden;
+  }
+  
+  .grid {
+    width: 200%;
+    height: 200%;
+    position: absolute;
+    top: -50%;
+    left: -50%;
+    background: linear-gradient(to right, rgba(255,255,255,0.05) 1px, transparent 1px) repeat,
+                linear-gradient(to bottom, rgba(255,255,255,0.05) 1px, transparent 1px) repeat;
+    background-size: 40px 40px;
+    transform: rotateX(60deg);
+    transform-origin: center center;
+    animation: moveGrid 10s linear infinite;
+    opacity: 0.2;
+  }
+  
+  @keyframes moveGrid {
+    0% { transform: rotateX(60deg) translateZ(0) translateY(0); }
+    100% { transform: rotateX(60deg) translateZ(-200px) translateY(-200px); }
+  }
+  
+  .scene {
+    position: absolute;
+    width: 1200px; /* قد تحتاج لتعديل هذه الأبعاد لتناسب الشاشات المختلفة */
+    height: 800px;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%) scale(1);
+    transform-origin: center center;
+    pointer-events: none; /* لا يتفاعل مع الفأرة */
+  }
+  
+  /* --- أنماط المجموعات والمكعبات والخطوط (كما هي) --- */
+  .group { position: absolute; width: 0; height: 0; }
+  .groupA { top: 25%; left: 20%; }
+  .groupB { top: 35%; left: 80%; }
+  .groupC { top: 75%; left: 50%; }
+  .cube { position: absolute; width: 0; height: 0; transform-style: preserve-3d; transform-origin: center center; transform: rotateX(35deg) rotateY(45deg) scale(0.8); }
+  .face { position: absolute; width: 80px; height: 80px; margin-left: -40px; margin-top: -40px; transform-origin: center center; background: rgba(137, 128, 223, 0.05); border: 1px solid rgba(247, 73, 255, 0.075); box-shadow: inset 0 0 10px rgba(87, 255, 255, 0.16); backdrop-filter: blur(2px); }
+  .face1 { transform: rotateY(0deg) translateZ(40px); }
+  .face2 { transform: rotateY(90deg) translateZ(40px); }
+  .face3 { transform: rotateY(180deg) translateZ(40px); }
+  .face4 { transform: rotateY(270deg) translateZ(40px); }
+  .face5 { transform: rotateX(90deg) translateZ(40px); }
+  .face6 { transform: rotateX(-270deg) translateZ(40px); }
+  .line { position: absolute; height: 2px; background: rgba(0,255,255,0.03); transform-origin: left center; }
+  .pulse { position: absolute; top: 50%; left: 0; width: 8px; height: 8px; border-radius: 50%; background: rgba(247,73,253,0.596); transform: translateY(-50%); }
+  /* --- Keyframes للحركة (كما هي) --- */
+  .cube1A { animation: spinCube1A 8s linear infinite; } @keyframes spinCube1A { 0% { transform: translate(-150px, -100px) rotateX(0deg) rotateY(0deg); } 100% { transform: translate(-150px, -100px) rotateX(360deg) rotateY(360deg); } }
+  .cube2A { animation: spinCube2A 10s linear infinite; } @keyframes spinCube2A { 0% { transform: translate(150px, -50px) rotateX(0deg) rotateY(0deg); } 100% { transform: translate(150px, -50px) rotateX(360deg) rotateY(360deg); } }
+  .cube3A { animation: spinCube3A 12s linear infinite; } @keyframes spinCube3A { 0% { transform: translate(0px, 100px) rotateX(0deg) rotateY(0deg); } 100% { transform: translate(0px, 100px) rotateX(360deg) rotateY(360deg); } }
+  .line1A { width: 304.138px; transform: translate(-150px, -100px) rotate(9.46deg); } .pulse1A { animation: movePulse1A 3s linear infinite; } @keyframes movePulse1A { 0% { transform: translateY(-50%) translateX(0px); } 100% { transform: translateY(-50%) translateX(304.138px); } }
+  .line2A { width: 212.132px; transform: translate(150px, -50px) rotate(135deg); } .pulse2A { animation: movePulse2A 3s linear infinite; } @keyframes movePulse2A { 0% { transform: translateY(-50%) translateX(0px); } 100% { transform: translateY(-50%) translateX(212.132px); } }
+  .line3A { width: 250px; transform: translate(0px, 100px) rotate(-126.87deg); } .pulse3A { animation: movePulse3A 3s linear infinite; } @keyframes movePulse3A { 0% { transform: translateY(-50%) translateX(0px); } 100% { transform: translateY(-50%) translateX(250px); } }
+  .cube1B { animation: spinCube1B 8s linear infinite; } @keyframes spinCube1B { 0% { transform: translate(-150px, -100px) rotateX(0deg) rotateY(0deg); } 100% { transform: translate(-150px, -100px) rotateX(360deg) rotateY(360deg); } }
+  .cube2B { animation: spinCube2B 10s linear infinite; } @keyframes spinCube2B { 0% { transform: translate(150px, -50px) rotateX(0deg) rotateY(0deg); } 100% { transform: translate(150px, -50px) rotateX(360deg) rotateY(360deg); } }
+  .cube3B { animation: spinCube3B 12s linear infinite; } @keyframes spinCube3B { 0% { transform: translate(0px, 100px) rotateX(0deg) rotateY(0deg); } 100% { transform: translate(0px, 100px) rotateX(360deg) rotateY(360deg); } }
+  .line1B { width: 304.138px; transform: translate(-150px, -100px) rotate(9.46deg); } .pulse1B { animation: movePulse1B 3s linear infinite; } @keyframes movePulse1B { 0% { transform: translateY(-50%) translateX(0px); } 100% { transform: translateY(-50%) translateX(304.138px); } }
+  .line2B { width: 212.132px; transform: translate(150px, -50px) rotate(135deg); } .pulse2B { animation: movePulse2B 3s linear infinite; } @keyframes movePulse2B { 0% { transform: translateY(-50%) translateX(0px); } 100% { transform: translateY(-50%) translateX(212.132px); } }
+  .line3B { width: 250px; transform: translate(0px, 100px) rotate(-126.87deg); } .pulse3B { animation: movePulse3B 3s linear infinite; } @keyframes movePulse3B { 0% { transform: translateY(-50%) translateX(0px); } 100% { transform: translateY(-50%) translateX(250px); } }
+  .cube1C { animation: spinCube1C 8s linear infinite; } @keyframes spinCube1C { 0% { transform: translate(-150px, -100px) rotateX(0deg) rotateY(0deg); } 100% { transform: translate(-150px, -100px) rotateX(360deg) rotateY(360deg); } }
+  .cube2C { animation: spinCube2C 10s linear infinite; } @keyframes spinCube2C { 0% { transform: translate(150px, -50px) rotateX(0deg) rotateY(0deg); } 100% { transform: translate(150px, -50px) rotateX(360deg) rotateY(360deg); } }
+  .cube3C { animation: spinCube3C 12s linear infinite; } @keyframes spinCube3C { 0% { transform: translate(0px, 100px) rotateX(0deg) rotateY(0deg); } 100% { transform: translate(0px, 100px) rotateX(360deg) rotateY(360deg); } }
+  .line1C { width: 304.138px; transform: translate(-150px, -100px) rotate(9.46deg); } .pulse1C { animation: movePulse1C 3s linear infinite; } @keyframes movePulse1C { 0% { transform: translateY(-50%) translateX(0px); } 100% { transform: translateY(-50%) translateX(304.138px); } }
+  .line2C { width: 212.132px; transform: translate(150px, -50px) rotate(135deg); } .pulse2C { animation: movePulse2C 3s linear infinite; } @keyframes movePulse2C { 0% { transform: translateY(-50%) translateX(0px); } 100% { transform: translateY(-50%) translateX(212.132px); } }
+  .line3C { width: 250px; transform: translate(0px, 100px) rotate(-126.87deg); } .pulse3C { animation: movePulse3C 3s linear infinite; } @keyframes movePulse3C { 0% { transform: translateY(-50%) translateX(0px); } 100% { transform: translateY(-50%) translateX(250px); } }
+  
+  /* =====================================================
+     5. Media Queries عامة (يمكن تعديلها لاحقًا)
+  ===================================================== */
+  /* استعلامات لتغيير حجم وعرض الحاويات على شاشات مختلفة */
+  @media (max-width: 1024px) {
+    .glass-effect.container {
+      width: 95%; /* زيادة العرض قليلاً للشاشات المتوسطة */
+      padding: 2rem; /* الحفاظ على الحشو */
+    }
+  }
+  
+  @media (max-width: 768px) {
+    .glass-effect.container {
+      width: 95%; /* عرض جيد للشاشات الصغيرة */
+      padding: 1.5rem; /* تقليل الحشو */
+    }
+  }
+  
+  @media (max-width: 480px) {
+    .glass-effect.container {
+      padding: 1rem; /* حشو أقل للشاشات الصغيرة جدًا */
+    }
+  }
+  
+  /* استعلامات لإخفاء أو تعديل الخلفية ثلاثية الأبعاد */
+  @media (max-width: 600px) {
+    .grid-container {
+      /* يمكن إخفاؤها بالكامل أو تقليل تعقيدها */
+      /* display: none; */
+    }
+      /* تعديل موقع وحجم المجموعات على الشاشات الصغيرة */
+      .scene {
+          /* قد تحتاج لتصغير scale لـ scene ككل */
+          transform: translate(-50%, -50%) scale(0.7); /* مثال: تصغير قليل */
+      }
+    .groupA { top: 15%; left: 50%; transform: scale(0.5) translateX(-50%); }
+    .groupB { top: 50%; left: 50%; transform: scale(0.5) translate(-50%, -50%); }
+    .groupC { top: 85%; left: 50%; transform: scale(0.5) translateX(-50%); }
+  }

@@ -1,0 +1,184 @@
+/* src/components/AtaManager/AtaManager.module.css */
+
+/* الحاوية تأخذ الأنماط الزجاجية من index.css */
+.ataContainer {
+  padding: 1.5rem; /* استخدام الحشو المحدد مسبقًا */
+  margin-top: 20px; /* الهامش العلوي المحدد مسبقًا */
+}
+
+.title {
+  text-align: center;
+  margin-bottom: 1.5rem;
+  /* استخدم الفئة العامة gradient-text-bold في JSX */
+}
+
+.loadingText {
+  text-align: center;
+  margin: 1rem 0;
+  color: #eee; /* لون فاتح */
+}
+
+.noAtasText {
+  text-align: center;
+  margin: 1rem 0;
+  color: #ddfcb3; /* اللون الأصلي */
+  font-weight: bold;
+}
+
+.columnsWrapper {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2rem;
+}
+
+.column {
+  flex: 1;
+  min-width: 300px;
+}
+
+.columnLeft {
+  /* نقل الأنماط الخاصة بالعمود الأيسر */
+  border-right: 1px solid rgba(247, 73, 253, 0.27);
+  padding-right: 1rem;
+}
+
+/* Media query لإزالة الحد */
+@media (max-width: 768px) {
+  .columnLeft {
+    border-right: none;
+    padding-right: 0;
+    margin-bottom: 2rem;
+  }
+}
+
+.listHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+
+.listTitle {
+  margin: 0;
+  /* استخدم gradient-text-bold في JSX */
+}
+
+.actionButton {
+  padding: 6px 12px;
+  cursor: pointer;
+  background: linear-gradient(25deg, #c773f2, #004080);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  font-weight: bold;
+  transition: background 0.3s ease, transform 0.3s ease, opacity 0.2s ease;
+  box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+}
+
+.actionButton:hover:not(:disabled) {
+  background: linear-gradient(25deg, #004080, #c773f2);
+  transform: scale(1.05);
+}
+
+.actionButton:disabled {
+  background: #555;
+  opacity: 0.6;
+  cursor: not-allowed;
+  box-shadow: none;
+  transform: none;
+}
+
+.ataList {
+  max-height: 250px;
+  overflow-y: auto;
+  border: 1px solid rgba(247, 73, 253, 0.27);
+  border-radius: 5px;
+  padding: 10px;
+  background-color: rgba(0,0,0,0.1);
+  list-style: none;
+  margin: 0;
+  padding-left: 0; /* إزالة الحشو الافتراضي لـ ul */
+}
+
+.ataListItem {
+  display: flex;
+  align-items: center;
+  margin-bottom: 5px;
+  border-bottom: 1px dashed #444;
+  padding-bottom: 3px;
+}
+.ataListItem:last-child {
+    border-bottom: none; /* إزالة الحد لآخر عنصر */
+}
+
+
+.ataCheckbox {
+  margin-right: 10px;
+  cursor: pointer;
+  /* يمكنك إضافة تنسيقات مخصصة للـ checkbox إذا أردت */
+}
+
+.ataLabel {
+  font-size: 0.9em;
+  word-break: break-all;
+  cursor: pointer;
+  flex-grow: 1;
+  font-family: 'monospace', sans-serif;
+  color: #eee;
+}
+
+.removeButton {
+  margin-left: 10px;
+  background: none;
+  border: none;
+  color: #ff6b6b;
+  cursor: pointer;
+  font-size: 1.2em;
+  padding: 0 5px;
+  line-height: 1;
+}
+.removeButton:hover {
+    color: #ff4d4d;
+}
+.removeButton:disabled {
+    color: #888;
+    cursor: not-allowed;
+}
+
+.claimButton {
+  /* استخدام نفس أنماط .close-button الأصلية مع بعض التعديلات */
+  width: 100%;
+  margin-bottom: 1rem;
+  background: linear-gradient(25deg, #c873f2, #004080);
+  padding: 12px 20px;
+  border-radius: 8px; /* تغيير بسيط في الحواف */
+  color: white;
+  font-size: 1.1rem; /* تصغير طفيف */
+  /* backdrop-filter: blur(10px); /* قد لا تحتاج لهذا إذا كانت الحاوية لها backdrop */
+  cursor: pointer;
+  transition: background 0.3s ease, transform 0.3s ease, opacity 0.2s ease;
+  border: 1.5px solid rgba(250, 253, 73, 0.534);
+  font-weight: bold; /* إضافة bold */
+}
+
+.claimButton:hover:not(:disabled) {
+  background: linear-gradient(25deg, #004080, #c773f2);
+  transform: scale(1.02); /* تقليل التأثير قليلاً */
+}
+
+.claimButton:disabled {
+  background: #555;
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+  border-color: #444; /* تغيير لون الحد عند التعطيل */
+}
+
+/* Media query لتعديل زر الإغلاق على الشاشات الصغيرة جدًا */
+@media (max-width: 480px) {
+ .claimButton {
+    /* لم يعد هذا ضروريًا هنا لأن الحاوية يتم تعديل حشوها */
+    /* margin-top: 50px; */
+  }
+}

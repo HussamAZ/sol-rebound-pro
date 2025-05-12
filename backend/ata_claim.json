@@ -1,0 +1,166 @@
+{
+  "address": "8RzqAPhqTcGd48DxErKV3PNsvZA7ogxXGwbar6oPhPnW",
+  "metadata": {
+    "name": "ata_claim",
+    "version": "0.1.0",
+    "spec": "0.1.0"
+  },
+  "instructions": [
+    {
+      "name": "close_multiple_atas",
+      "docs": [
+        "Closes multiple empty Associated Token Accounts (ATAs) for the user,",
+        "recovers the rent lamports, transfers a platform fee to the treasury,",
+        "and optionally transfers a referral commission to the referrer.",
+        "",
+        "Accounts expected in `ctx.remaining_accounts`:",
+        "- The ATAs to be closed (must be writable, owned by token_program, belong to the user, and be empty).",
+        "- If `referrer_key` argument is Some(key), the account corresponding to `key` must also be present and writable."
+      ],
+      "discriminator": [
+        194,
+        122,
+        68,
+        116,
+        143,
+        165,
+        99,
+        94
+      ],
+      "accounts": [
+        {
+          "name": "user",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "treasury",
+          "writable": true
+        },
+        {
+          "name": "token_program",
+          "address": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": [
+        {
+          "name": "referrer_key",
+          "type": {
+            "option": "pubkey"
+          }
+        }
+      ]
+    },
+    {
+      "name": "distribute_rewards",
+      "discriminator": [
+        97,
+        6,
+        227,
+        255,
+        124,
+        165,
+        3,
+        148
+      ],
+      "accounts": [
+        {
+          "name": "treasury",
+          "writable": true
+        },
+        {
+          "name": "authority",
+          "signer": true
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": [
+        {
+          "name": "amounts",
+          "type": {
+            "vec": "u64"
+          }
+        }
+      ]
+    }
+  ],
+  "errors": [
+    {
+      "code": 6000,
+      "name": "MathOverflow",
+      "msg": "Calculation overflowed or underflowed."
+    },
+    {
+      "code": 6001,
+      "name": "ReferrerCannotBeUser",
+      "msg": "Referrer cannot be the same as the user."
+    },
+    {
+      "code": 6002,
+      "name": "Unauthorized",
+      "msg": "Unauthorized: The signer is not the designated admin authority."
+    },
+    {
+      "code": 6003,
+      "name": "MismatchRewardAmounts",
+      "msg": "The number of recipient accounts does not match the number of amounts provided."
+    },
+    {
+      "code": 6004,
+      "name": "NoRecipients",
+      "msg": "Cannot distribute rewards because the recipient list is empty."
+    },
+    {
+      "code": 6005,
+      "name": "InsufficientTreasuryBalance",
+      "msg": "The treasury account does not have enough balance to distribute the rewards."
+    },
+    {
+      "code": 6006,
+      "name": "AccountNotWritable",
+      "msg": "Provided account is not writable."
+    },
+    {
+      "code": 6007,
+      "name": "IncorrectAccountOwner",
+      "msg": "Provided account has an incorrect owner."
+    },
+    {
+      "code": 6008,
+      "name": "AtaOwnerMismatch",
+      "msg": "The ATA owner does not match the user signing the transaction."
+    },
+    {
+      "code": 6009,
+      "name": "AtaIsNotEmpty",
+      "msg": "The ATA is not empty and cannot be closed."
+    },
+    {
+      "code": 6010,
+      "name": "IncorrectAtaLamports",
+      "msg": "The ATA lamport balance is not the expected rent-exempt minimum."
+    },
+    {
+      "code": 6011,
+      "name": "NoAccountsToClose",
+      "msg": "No accounts provided to close."
+    },
+    {
+      "code": 6012,
+      "name": "ReferrerAccountNotFound",
+      "msg": "Referrer account provided as argument was not found in the transaction's accounts."
+    },
+    {
+      "code": 6013,
+      "name": "ReferrerAccountNotWritable",
+      "msg": "Referrer account provided must be writable to receive commission."
+    }
+  ]
+}

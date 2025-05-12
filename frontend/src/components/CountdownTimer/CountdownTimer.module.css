@@ -1,0 +1,77 @@
+/* src/components/CountdownTimer/CountdownTimer.module.css */
+
+/* الحاوية تأخذ الأنماط الزجاجية العامة */
+.timerContainer {
+    padding: 1.5rem;
+    margin-top: 20px; /* نفس هامش الحاويات الأخرى */
+    text-align: center;
+  }
+  
+  .timerTitle {
+    margin-bottom: 1.5rem;
+    /* استخدم gradient-text-bold في JSX */
+  }
+  
+  .timerDisplay {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 0.8rem; /* مسافة بين كتل الوقت والفواصل */
+    flex-wrap: wrap; /* السماح بالالتفاف على الشاشات الصغيرة */
+  }
+  
+  .timeBlock {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    background-color: rgba(0, 0, 0, 0.2); /* خلفية طفيفة لكتل الوقت */
+    padding: 8px 12px;
+    border-radius: 6px;
+    min-width: 60px; /* عرض أدنى للحفاظ على الشكل */
+  }
+  
+  .timeValue {
+    font-size: 2em; /* حجم كبير للرقم */
+    font-weight: bold;
+    color: #fff;
+    line-height: 1; /* لتقريب الرقم من التسمية */
+  }
+  
+  .timeLabel {
+    font-size: 0.75em;
+    color: #ddfcb3; /* نفس لون العناوين الفرعية */
+    text-transform: uppercase; /* جعل التسميات بأحرف كبيرة */
+    margin-top: 4px;
+  }
+  
+  .separator {
+    font-size: 1.8em;
+    font-weight: bold;
+    color: #ddfcb3;
+    align-self: center; /* توسيط الفاصل رأسيًا */
+    padding-bottom: 15px; /* تعديل محاذاة الفاصل */
+  }
+  
+  .timerEnded {
+    font-size: 1.2em;
+    color: #ffcc00; /* لون تحذيري أو إعلامي */
+    font-weight: bold;
+  }
+  
+  /* Media query لتصغير حجم الخط على الشاشات الصغيرة */
+  @media (max-width: 480px) {
+    .timeValue {
+      font-size: 1.5em;
+    }
+    .separator {
+        font-size: 1.3em;
+        padding-bottom: 10px;
+    }
+    .timerDisplay {
+        gap: 0.5rem;
+    }
+    .timeBlock {
+        padding: 6px 8px;
+        min-width: 50px;
+    }
+  }

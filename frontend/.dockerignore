@@ -1,0 +1,38 @@
+# frontend/.dockerignore
+
+# تجاهل مجلد node_modules المحلي تمامًا
+node_modules
+
+# تجاهل مجلد البناء المحلي (سيتم إنشاؤه داخل الحاوية)
+build
+
+# تجاهل ملفات الإعداد المحلية
+.env
+.env*.local
+.env.development
+.env.test
+.env.production
+
+# تجاهل ملفات npm debug logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# تجاهل الملفات الخاصة بنظام التشغيل والمحرر
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# تجاهل ملفات Git
+.git
+.gitignore
+
+# تجاهل ملفات الحزمة إذا كنت لا تريد نسخها (عادة ننسخها)
+# package-lock.json # <-- لا تتجاهل هذا عادةً
+# package.json      # <-- لا تتجاهل هذا عادةً
+
+# تجاهل ملفات Docker نفسها
+Dockerfile
+.dockerignore
+nginx.conf # <-- تجاهله إذا لم يكن جزءًا من الكود المصدري الأساسي

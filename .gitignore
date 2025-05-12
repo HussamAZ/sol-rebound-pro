@@ -1,0 +1,76 @@
+# D:\sol rebound pro\.gitignore
+
+# Dependency directories
+node_modules/
+**/node_modules/
+
+# Build output
+build/
+**/build/
+target/
+**/target/
+
+# Environment variables files
+.env
+.env*
+!.env.example
+
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# OS generated files
+.DS_Store
+Thumbs.db
+
+# Editor directories and files
+.vscode/
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# Docker secrets file (if you ever use one)
+# docker-secrets.yml
+
+# Docker volumes data (CRITICAL to ignore)
+vault_data/
+mongo_data/
+grafana_data/
+prometheus_data/ # إذا كنت تخزن بيانات Prometheus في volume
+
+# Vault config file if it contains sensitive info (ours doesn't currently)
+# vault-config.hcl
+
+# Keypair JSON files (IMPORTANT - if generated/placed in project root)
+# These are examples; adjust if your keypair filenames are different
+# or if they are stored securely elsewhere and not in the project.
+hot-wallet.json
+main-treasury-wallet.json
+admin-authority-wallet.json
+test-wallet-account.json
+authority-account.json
+
+# Specific Solana files if generated in root and not needed in repo
+# ledger/ # إذا كنت تستخدم solana-test-validator مع --ledger في الجذر
+
+# Anchor localnet ledger if tests are run from project root
+# .anchor/LocalnetLedger/
+
+# Compiled smart contract (if not already handled by target/ in smart-contract folder's .gitignore)
+# *.so
+
+# Other potentially sensitive or large files
+# *.pem
+# *.pfx
+# large_dataset.csv
+# local_database_dump.sql
+
+# Solana local test ledger files
+smart-contract/ata-claim/test-ledger/
+**/test-ledger/

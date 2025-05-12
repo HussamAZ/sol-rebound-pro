@@ -1,0 +1,224 @@
+/* src/components/Footer/Footer.module.css */
+
+/* الحاوية تأخذ الأنماط الزجاجية من index.css */
+.footerContainer {
+  padding: 1.5rem;
+  margin-top: 20px;
+  margin-bottom: 20px; /* التأكد من وجود هامش سفلي */
+  text-align: center;
+}
+
+/* --- أنماط قسم FAQ --- */
+.faqSection {
+  margin-bottom: 2rem; /* مسافة أسفل قسم FAQ */
+  text-align: left; /* محاذاة النص لليسار داخل القسم */
+  max-width: 800px; /* عرض أقصى للقسم */
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.faqTitle {
+  text-align: center; /* توسيط عنوان FAQ */
+  margin-bottom: 1.5rem;
+  font-size: 1.4em;
+}
+
+.faqItem {
+  margin-bottom: 10px;
+  border: 1px solid rgba(247, 73, 253, 0.15); /* حد خفيف لكل سؤال */
+  border-radius: 8px;
+  overflow: hidden; /* لإخفاء الإجابة عند الطي */
+}
+
+/* أنماط حاوية الأعمدة والأعمدة لـ FAQ */
+.faqColumnsContainer {
+  display: flex;
+  flex-wrap: wrap; /* للسماح بالالتفاف على الشاشات الصغيرة */
+  gap: 1.5rem; /* المسافة بين الأعمدة */
+  margin-top: 1.5rem; /* مسافة فوق الأعمدة (بعد السؤال الأول) */
+}
+
+.faqColumn {
+  flex: 1; /* اجعل كل عمود يأخذ نصف المساحة المتاحة */
+  min-width: 280px; /* عرض أدنى قبل الالتفاف */
+}
+
+/* أنماط السؤال */
+.faqQuestion {
+  display: flex; /* استخدام flex لتوزيع النص والأيقونة */
+  justify-content: space-between; /* وضع الأيقونة في النهاية */
+  align-items: center;
+  width: 100%;
+  background: rgba(255, 255, 255, 0.05); /* خلفية طفيفة للسؤال */
+  border: none;
+  padding: 12px 15px;
+  text-align: left;
+  color: #ddfcb3; /* لون السؤال */
+  font-size: 1.05em;
+  font-weight: bold;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+.faqQuestion:hover {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+/* أنماط أيقونة فتح/إغلاق FAQ */
+.faqIcon {
+  font-size: 0.8em;
+  transition: transform 0.3s ease;
+}
+
+.faqIconOpen {
+  transform: rotate(180deg); /* تدوير السهم عند الفتح */
+}
+
+/* أنماط الإجابة */
+.faqAnswer {
+  padding: 0px 15px; /* لا حشو رأسي في البداية */
+  font-size: 0.95em;
+  color: #eee; /* لون الإجابة */
+  max-height: 0; /* إخفاء الإجابة */
+  overflow: hidden; /* إخفاء المحتوى الزائد */
+  transition: max-height 0.4s ease-out, padding 0.4s ease-out; /* تأثير الحركة */
+  background: rgba(0, 0, 0, 0.1); /* خلفية طفيفة للإجابة */
+}
+
+.faqAnswerOpen {
+  max-height: 300px; /* ارتفاع أقصى للسماح بظهور المحتوى */
+  padding: 15px 15px; /* إعادة الحشو عند الفتح */
+}
+/* --- نهاية أنماط قسم FAQ --- */
+
+
+/* --- أنماط قسم "تابعنا" الجديد --- */
+.followUsSection {
+  margin-top: 2rem;    /* مسافة فوق القسم */
+  margin-bottom: 1.5rem;/* مسافة تحت القسم */
+  padding: 0 1rem;     /* حشو جانبي */
+  text-align: center;  /* توسيط كل المحتوى افتراضيًا */
+}
+
+.followUsContent {
+  /* لا تحتاج لأنماط معقدة هنا، التوسيط يتم عبر الحاوية الأب */
+  display: inline-block; /* يسمح بالتوسيط الأفقي مع text-align: center */
+  text-align: center;
+}
+
+.footerLogo {
+    width: 70px; /* حجم الشعار في الفوتر */
+    height: auto;
+    margin-bottom: 0.8rem;
+}
+
+.followText {
+  color: #ccc;
+  font-size: 0.95em;
+  margin-bottom: 0.8rem;
+  line-height: 1.5;
+  font-weight: bold;
+}
+
+.socialIcons {
+  
+  display: flex;
+  justify-content: center; /* توسيط الأيقونات */
+  gap: 1.5rem; /* مسافة بين الأيقونات */
+}
+
+.socialIcon {
+  width: 32px; /* حجم أيقونات التواصل الاجتماعي */
+  height: 32px;
+  fill: #aaa; /* لون الأيقونة الافتراضي */
+  transition: fill 0.2s ease, transform 0.2s ease;
+}
+
+.socialIcon:hover {
+  fill: #eee; /* تغيير اللون عند المرور */
+  transform: scale(1.1); /* تكبير طفيف */
+}
+/* --- نهاية أنماط قسم "تابعنا" --- */
+
+
+/* --- أنماط الفاصل والنص السفلي --- */
+.footerDivider {
+  border: none;
+  border-top: 1px solid rgba(247, 73, 253, 0.2); /* لون الخط الفاصل */
+  margin: 1.5rem auto; /* هوامش للخط */
+  width: 80%; /* عرض الخط */
+}
+
+/* --- أنماط معلومات العقد الذكي --- */
+.contractInfo {
+  margin-top: 1rem; /* مسافة فوق معلومات العقد */
+  margin-bottom: 1rem; /* مسافة تحت معلومات العقد */
+  font-size: 0.9em;
+  color: #ccc; /* لون فاتح قليلاً */
+  text-align: center;
+}
+
+.contractLabel {
+  font-weight: bold;
+  margin-right: 8px;
+  color: #ddfcb3; /* نفس لون العناوين الفرعية */
+}
+
+.contractAddressLink {
+  color: #87CEFA; /* لون أزرق فاتح للرابط */
+  font-family: 'monospace', sans-serif; /* خط monospace للعنوان */
+  text-decoration: none;
+  word-break: break-all; /* للسماح بكسر العنوان الطويل */
+  transition: color 0.2s ease;
+  font-weight: bold;
+}
+
+.contractAddressLink:hover {
+  color: #add8e6; /* تغيير اللون عند المرور */
+  text-decoration: underline;
+}
+
+/* --- نهاية أنماط معلومات العقد الذكي --- */
+
+.footerText {
+  text-align: center;
+  margin-bottom: 0; /* تقليل الهامش السفلي */
+  font-size: 1rem;
+  font-weight: bold;
+}
+
+/* (اختياري) أنماط الروابط الإضافية */
+.footerLinks {
+    margin-top: 10px;
+    font-size: 0.9em;
+}
+.footerLinks a {
+    color: #aaa;
+    text-decoration: none;
+    margin: 0 10px;
+    transition: color 0.2s ease;
+}
+.footerLinks a:hover {
+    color: #eee;
+}
+/* تعديل التخطيط للشاشات الصغيرة */
+@media (max-width: 768px) {
+    .infoLinksSection {
+        flex-direction: column;
+        align-items: center;
+        text-align: center;
+        gap: 2.5rem;
+    }
+    .infoColumnLeft,
+    .infoColumnRight {
+        min-width: 100%;
+    }
+     /* --- !! تعديل لتوسيط روابط الأدوات !! --- */
+    .toolListContainer {
+        align-items: center; /* توسيط عناصر flex (الروابط) */
+    }
+    .toolLinkItem {
+         /* width: auto; */ /* لم يعد ضروريًا مع inline-flex */
+    }
+     /* --- نهاية تعديل التوسيط --- */
+}

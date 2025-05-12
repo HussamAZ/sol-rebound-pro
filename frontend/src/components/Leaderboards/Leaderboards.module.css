@@ -1,0 +1,111 @@
+/* src/components/Leaderboards/Leaderboards.module.css */
+
+/* الحاوية تأخذ الأنماط الزجاجية من index.css */
+.leaderboardContainer {
+  padding: 1.5rem;
+  margin-top: 20px;
+}
+
+.title {
+  text-align: center;
+  margin-bottom: 1rem;
+  /* استخدم gradient-text-bold في JSX */
+}
+
+.subtitle {
+  text-align: center;
+  /* font-size: 0.9em; */ /* سنزيد الحجم قليلاً */
+  font-size: 1.15em;   /* <-- زيادة حجم الخط قليلاً */
+  /* color: #ddfcb3; */   /* اللون الأصلي كان باهتًا قليلاً */
+  color: #ffffff;       /* <-- تغيير اللون إلى الأبيض ليكون أوضح */
+  margin-bottom: 1.5rem;
+  font-weight: 600;     /* <-- زيادة سماكة الخط (600 أو 700) */
+  line-height: 1.4;     /* <-- زيادة تباعد الأسطر قليلاً إذا كان النص يلتف */
+  max-width: 80%;       /* <-- تحديد عرض أقصى للنص لمنعه من الامتداد كثيرًا */
+  margin-left: auto;    /* <-- توسيط النص ذي العرض الأقصى */
+  margin-right: auto;   /* <-- توسيط النص ذي العرض الأقصى */
+  text-shadow: 1px 1px 3px rgba(0, 0, 0, 0.4); /* <-- إضافة ظل خفيف للنص لزيادة الوضوح */
+}
+
+.loadingText, .errorText, .emptyText {
+  text-align: center;
+  margin: 1rem 0;
+}
+.loadingText { color: #eee; }
+.errorText { color: #ffcc00; } /* لون تحذيري */
+.emptyText { color: #aaa; }
+
+.leaderboardTable {
+  width: 100%;
+  border-collapse: collapse;
+  color: #fff;
+  font-size: 0.9em;
+  margin-top: 1rem;
+}
+
+.leaderboardTable th, .leaderboardTable td {
+  padding: 8px 10px;
+  text-align: left;
+}
+
+.leaderboardTable thead tr {
+  border-bottom: 1px solid rgba(247, 73, 253, 0.5); /* لون الحد الأصلي */
+}
+
+.leaderboardTable tbody tr {
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+.leaderboardTable tbody tr:last-child {
+    border-bottom: none;
+}
+
+.rankCell {
+    width: 50px;
+    font-weight: bold;
+}
+
+.walletCell {
+    font-family: 'monospace', sans-serif;
+    word-break: keep-all;
+}
+
+.scoreCell {
+    text-align: right;
+    font-weight: bold;
+}
+
+.earningsScore { color: #93fc8b; } /* أخضر */
+.accountsScore { color: #87CEFA; } /* أزرق فاتح */
+
+.rankIcon {
+    margin-right: 5px;
+    font-size: 1.1em;
+}
+/* نمط لتمييز صفوف أفضل 10 */
+.topTenRow {
+  /* مثال: تغيير لون الخلفية قليلاً */
+  background-color: rgba(255, 255, 255, 0.044) !important; /* استخدم important لضمان التجاوز إذا لزم الأمر */
+  /* مثال: إضافة حد علوي مميز */
+   border-top: 2px solid rgba(0, 225, 255, 0.31); 
+}
+.topTenScoreHighlight {
+  color: #ffb8fb; /* اللون الوردي/الأرجواني المطلوب */
+  font-weight: bold; /* يمكن جعل الرقم bold أيضًا إذا أردت */
+}
+
+/* يمكنك جعل الخط أعرض لأفضل 10 إذا أردت */
+.topTenRow td {
+  font-weight: bold; 
+}
+
+/* إزالة الحد السفلي لآخر عنصر في الجدول (يبقى كما هو) */
+.leaderboardTable tbody tr:last-child {
+    border-bottom: none;
+}
+
+@media (max-width: 480px) {
+  .subtitle {
+    font-size: 0.95em;
+    max-width: 90%;
+  }
+}

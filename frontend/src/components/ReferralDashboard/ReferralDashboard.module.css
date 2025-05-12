@@ -1,0 +1,174 @@
+/* src/components/ReferralDashboard/ReferralDashboard.module.css */
+
+/* الحاوية تأخذ الأنماط الزجاجية من index.css */
+.referralContainer {
+  padding: 1.5rem;
+  margin-top: 20px;
+}
+
+.title {
+  text-align: center;
+  margin-bottom: 1.5rem;
+  /* استخدم gradient-text-bold في JSX */
+}
+
+.loadingText, .errorText {
+  text-align: center;
+  margin: 1rem 0;
+}
+.loadingText { color: #eee; }
+.errorText { color: #ff6b6b; } /* أحمر للأخطاء */
+
+.linkContainer {
+  margin-bottom: 1.5rem;
+  width: 100%;
+  max-width: 850px;
+  margin-left: auto;
+  margin-right: auto;
+  text-align: center;
+}
+
+.linkLabel {
+  /* استخدام gradient-text-bold في JSX */
+  display: block;
+  margin-bottom: 10px;
+  color: #ddfcb3; /* استخدام اللون المحدد للعناوين */
+  font-weight: bold; /* تأكيد الـ bold */
+}
+
+.linkBox {
+  display: inline-block;
+  padding: 10px 15px;
+  background: linear-gradient(25deg, #c773f2, #004080);
+  color: #fff;
+  border-radius: 8px;
+  border: none;
+  cursor: pointer;
+  word-break: break-all;
+  transition: background 0.3s ease, transform 0.3s ease;
+  max-width: 100%;
+  box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+  font-family: 'monospace', sans-serif;
+  position: relative;
+}
+
+.linkBox:hover {
+  background: linear-gradient(25deg, #004080, #c773f2);
+  transform: scale(1.03);
+}
+
+.linkText {
+    vertical-align: middle;
+    margin-right: 15px;
+}
+
+.copyButton {
+  margin-left: 12px;
+  padding: 3px 8px;
+  border-radius: 4px;
+  font-size: 0.75em;
+  font-weight: bold;
+  transition: background-color 0.3s ease;
+  vertical-align: middle;
+  border: none;
+  color: white;
+}
+
+.copyButtonSuccess { background-color: #28a745; }
+.copyButtonError   { background-color: #dc3545; }
+.copyButtonDefault { background-color: rgba(0,0,0,0.4); }
+
+.statsGrid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  justify-content: center;
+  max-width: 900px;
+  margin: 0 auto 1.5rem auto;
+}
+
+.statCard {
+  flex: 1 1 200px;
+  min-width: 180px;
+  text-align: center;
+  padding: 10px;
+  border: 1px solid rgba(247, 73, 253, 0.27);
+  border-radius: 8px;
+  background: rgba(0,0,0,0.1);
+}
+
+.statLabel {
+  margin: 0 0 5px 0;
+  font-size: 0.9em;
+  /* استخدم gradient-text-bold في JSX */
+  font-weight: bold; /* تأكيد الـ bold */
+  color: #ddfcb3; /* لون موحد للعنوان */
+}
+
+.statValue {
+  margin: 0;
+  font-size: 1.5em;
+  font-weight: bold;
+  color: #fff;
+}
+
+.statPeriod {
+  margin: 5px 0 0 0;
+  font-size: 0.8em;
+  color: #ddfcb3;
+}
+
+
+.withdrawSection {
+  text-align: center;
+  border-top: 1px solid #444;
+  padding-top: 1.5rem;
+  margin-top: 1rem;
+}
+
+.earningsText {
+  margin-bottom: 1rem;
+  color: #eee;
+}
+
+.earningsValue {
+    font-weight: bold;
+    color: #93fc8b;
+}
+
+.lamportsValue {
+    font-size: 0.8em;
+    margin-left: 5px;
+    color: #ccc;
+}
+
+.withdrawButton {
+  padding: 10px 20px;
+  cursor: pointer;
+  background: linear-gradient(25deg, #c773f2, #004080);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 1rem;
+  font-weight: bold;
+  transition: background 0.3s ease, transform 0.3s ease, opacity 0.2s ease;
+  box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+}
+.withdrawButton:hover:not(:disabled) {
+    background: linear-gradient(25deg, #004080, #c773f2);
+    transform: scale(1.05);
+}
+.withdrawButton:disabled {
+    background: #555;
+    opacity: 0.6;
+    cursor: not-allowed;
+    box-shadow: none;
+    transform: none;
+}
+
+.withdrawNote {
+    display: block;
+    margin-top: 8px;
+    font-size: 0.9em;
+    color: #ddfcb3;
+}

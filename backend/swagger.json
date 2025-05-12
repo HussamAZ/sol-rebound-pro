@@ -1,0 +1,516 @@
+{
+  "openapi": "3.0.0",
+  "info": {
+    "title": "Sol Rebound Pro API",
+    "version": "2.1.0",
+    "description": "API for Sol Rebound Pro: Handles user initialization, ATA closing operations, referral tracking, weekly leaderboards, project statistics, and provides debug utilities.",
+    "contact": {
+      "name": "Sol Rebound Pro Support",
+      "email": "support@solrebound.xyz"
+    }
+  },
+  "servers": [
+    {
+      "url": "/api",
+      "description": "API endpoint via Nginx proxy (recommended for production)"
+    },
+    {
+      "url": "http://localhost:3001",
+      "description": "Direct Backend Access (Development only)"
+    }
+  ],
+  "tags": [
+    {
+      "name": "Users",
+      "description": "User initialization and management."
+    },
+    {
+      "name": "Transactions",
+      "description": "ATA closing operations."
+    },
+    {
+      "name": "Referrals",
+      "description": "Fetching referral information and statistics."
+    },
+    {
+      "name": "Leaderboards",
+      "description": "Fetching weekly leaderboards for top referrers and closers."
+    },
+    {
+      "name": "Stats",
+      "description": "Overall project and platform statistics."
+    },
+    {
+      "name": "Metrics",
+      "description": "Prometheus metrics scraping endpoint."
+    },
+    {
+      "name": "Debug",
+      "description": "Endpoints for debugging and manually triggering scheduled jobs (Development/Admin ONLY)."
+    }
+  ],
+  "paths": {
+    "/users/initialize": {
+      "post": {
+        "tags": ["Users"],
+        "summary": "Initialize or fetch user record",
+        "description": "Checks if a user record exists for the given public key. If not, it creates one. If a valid `potentialReferrer` is provided and the user is new, it associates this referrer as the user's *original referrer* in the database and increments the referrer's referral counts. Always returns the user's original referrer from the database (if any).",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["userPublicKeyString"],
+                "properties": {
+                  "userPublicKeyString": {
+                    "type": "string",
+                    "description": "The public key (base58 encoded) of the user to initialize.",
+                    "example": "USER_WALLET_PUBKEY_HERE"
+                  },
+                  "potentialReferrer": {
+                    "type": "string",
+                    "description": "(Optional) The public key (base58 encoded) of the potential referrer (usually from URL `?ref=...`). This will only be used to set the original referrer if the user is being created for the first time.",
+                    "example": "REFERRER_WALLET_PUBKEY_HERE"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "User record initialized or checked successfully.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": ["success", "message", "wasCreated", "userReferrer"],
+                  "properties": {
+                    "success": { "type": "boolean", "example": true },
+                    "message": { "type": "string", "example": "User record created successfully." },
+                    "wasCreated": { "type": "boolean", "description": "True if a new user record was created during this call.", "example": true },
+                    "userReferrer": {
+                      "type": ["string", "null"],
+                      "description": "The original referrer's public key (decrypted, base58 encoded) associated with the user in the database. Null if the user has no original referrer.",
+                      "example": "ORIGINAL_REFERRER_PUBKEY_HERE"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": { "$ref": "#/components/responses/BadRequest" },
+          "500": { "$ref": "#/components/responses/InternalServerError" }
+        }
+      }
+    },
+    "/transactions/prepare-close": {
+      "post": {
+        "tags": ["Transactions"],
+        "summary": "Prepare Solana transaction to close multiple empty ATAs",
+        "description": "Builds a Solana transaction. When signed and sent by the user, this transaction will close the specified empty ATAs, recover the rent to the user, transfer a platform fee to the treasury, and transfer a referral commission (if applicable) to the user's *original referrer* (as stored in the database). Returns the serialized transaction (base64) and estimated platform fee.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["userPublicKeyString", "ataAddresses"],
+                "properties": {
+                  "userPublicKeyString": {
+                    "type": "string",
+                    "description": "The user's wallet public key (base58 encoded). They will be the fee payer and recipient of recovered rent.",
+                    "example": "USER_WALLET_PUBKEY_HERE"
+                  },
+                  "ataAddresses": {
+                    "type": "array",
+                    "items": { "type": "string" },
+                    "description": "An array of base58 encoded public keys for the empty ATA accounts to be closed.",
+                    "example": ["ATA_ADDRESS_1", "ATA_ADDRESS_2"]
+                  },
+                  "referrerPublicKeyString": {
+                    "type": "string",
+                    "description": "(Optional) The public key (base58 encoded) of the referrer from the current session/URL. This is primarily used by `/users/initialize` if the user is new. For `prepare-close`, the backend uses the user's *original referrer from the database* to build the transaction instructions for the smart contract.",
+                    "example": "REFERRER_FROM_URL_PUBKEY_HERE"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Transaction prepared successfully.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": ["success", "transaction", "platformFeeLamports"],
+                  "properties": {
+                    "success": { "type": "boolean", "example": true },
+                    "transaction": {
+                      "type": "string",
+                      "description": "The serialized Solana transaction, base64 encoded. Ready to be signed by the user's wallet.",
+                      "example": "AgAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=="
+                    },
+                    "platformFeeLamports": {
+                       "type": "string",
+                       "description": "Estimated total platform fee (in lamports) that will be handled by the smart contract.",
+                       "example": "509820"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": { "$ref": "#/components/responses/BadRequest" },
+          "500": { "$ref": "#/components/responses/InternalServerError" },
+          "503": {
+            "description": "Service Unavailable - Solana configuration might not be ready.",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorResponse" } } }
+          }
+        }
+      }
+    },
+    "/transactions/confirm-close": {
+      "post": {
+        "tags": ["Transactions"],
+        "summary": "Confirm successful ATA closing and update backend stats",
+        "description": "Notifies the backend that a previously prepared transaction was successfully signed, sent, and confirmed on the Solana blockchain. The backend verifies the transaction against the chain and then updates the user's closed account statistics. If the user has an original referrer stored in the database, that referrer's earnings statistics (from the commission they received directly via the smart contract) are also updated. Net platform earnings are recorded.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["signature", "userPublicKeyString", "closedCount", "platformFeeLamportsString"],
+                "properties": {
+                  "signature": {
+                    "type": "string",
+                    "description": "The base58 encoded signature of the confirmed Solana transaction.",
+                    "example": "TX_SIGNATURE_HERE"
+                  },
+                  "userPublicKeyString": {
+                    "type": "string",
+                    "description": "The public key (base58 encoded) of the user who initiated the transaction (must match the fee payer on-chain).",
+                    "example": "USER_WALLET_PUBKEY_HERE"
+                  },
+                  "referrerPublicKeyString": {
+                    "type": "string",
+                    "description": "(Optional) The public key (base58 encoded) of the referrer from the URL during the session when the transaction was prepared. This is used by the backend *only if the user was newly created* by the `/users/initialize` call during this session, to ensure the original referrer gets credit for new user acquisition if this is the user's very first closing action. For commission distribution, the system relies on the original referrer stored in the user's database record.",
+                    "example": "REFERRER_FROM_URL_PUBKEY_HERE"
+                  },
+                  "closedCount": {
+                    "type": "integer",
+                    "format": "int32",
+                    "minimum": 1,
+                    "description": "The number of ATA accounts that were closed in this transaction.",
+                    "example": 2
+                  },
+                  "platformFeeLamportsString": {
+                     "type": "string",
+                     "description": "The total platform fee (in lamports) calculated by the frontend/backend and expected to be handled by the smart contract for this transaction (as received from `prepare-close` response).",
+                     "example": "1019640"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Database updated successfully after transaction verification.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": ["success", "message"],
+                  "properties": {
+                    "success": { "type": "boolean", "example": true },
+                    "message": { "type": "string", "example": "Database updated successfully." }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request - Missing parameters, invalid input, or transaction verification failed (e.g., not found, failed on-chain, fee payer mismatch).",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorResponse" } } }
+          },
+          "500": { "$ref": "#/components/responses/InternalServerError" }
+        }
+      }
+    },
+    "/referrals/info": {
+      "get": {
+        "tags": ["Referrals"],
+        "summary": "Get referral and activity statistics for a user",
+        "description": "Retrieves lifetime and weekly statistics for the specified user. This includes: their original referrer (if any), their earnings from referring *other* users, the number of ATAs *they* have closed, and the number of new users *they* have successfully referred. Returns a default structure if the user has no existing record.",
+        "parameters": [
+          {
+            "name": "user",
+            "in": "query",
+            "required": true,
+            "description": "The public key (base58 encoded) of the user whose info is requested.",
+            "schema": { "type": "string" },
+            "example": "USER_WALLET_PUBKEY_HERE"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Referral information retrieved (or default structure for new users).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": ["success", "data"],
+                  "properties": {
+                    "success": { "type": "boolean", "example": true },
+                    "data": { "$ref": "#/components/schemas/ReferralInfo" },
+                    "message": {
+                       "type": "string",
+                       "description": "Optional message, e.g., indicating default data if user is new.",
+                       "example": "Default referral data shown."
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": { "$ref": "#/components/responses/BadRequest" },
+          "500": { "$ref": "#/components/responses/InternalServerError" }
+        }
+      }
+    },
+    "/leaderboards/top-referrers": {
+      "get": {
+        "tags": ["Leaderboards"],
+        "summary": "Get weekly top referrers list",
+        "description": "Retrieves the top users based on their total lifetime referral count (`referralsCount`). The weekly earnings shown are for informational context.",
+        "parameters": [
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "description": "Number of top users to return (default: 15, top 10 eligible for rewards).",
+            "schema": { "type": "integer", "format": "int32", "default": 15, "minimum": 1 }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Top referrers list retrieved successfully.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": ["success", "data"],
+                  "properties": {
+                    "success": { "type": "boolean", "example": true },
+                    "data": {
+                      "type": "array",
+                      "items": { "$ref": "#/components/schemas/LeaderboardReferrerEntry" }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "500": { "$ref": "#/components/responses/InternalServerError" }
+        }
+      }
+    },
+    "/leaderboards/top-closers": {
+      "get": {
+        "tags": ["Leaderboards"],
+        "summary": "Get weekly top closers list",
+        "description": "Retrieves the top users based on the number of ATAs they closed weekly (`weeklyClosedAccounts`).",
+        "parameters": [
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "description": "Number of top users to return (default: 15, top 10 eligible for rewards).",
+            "schema": { "type": "integer", "format": "int32", "default": 15, "minimum": 1 }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Top closers list retrieved successfully.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": ["success", "data"],
+                  "properties": {
+                    "success": { "type": "boolean", "example": true },
+                    "data": {
+                      "type": "array",
+                      "items": { "$ref": "#/components/schemas/LeaderboardCloserEntry" }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "500": { "$ref": "#/components/responses/InternalServerError" }
+        }
+      }
+    },
+    "/stats/overall": {
+      "get": {
+        "tags": ["Stats"],
+        "summary": "Get overall project statistics",
+        "description": "Retrieves aggregated statistics for the entire platform, such as total ATAs closed, total SOL recovered by users, and total SOL commissions paid to referrers.",
+        "responses": {
+          "200": {
+            "description": "Overall statistics retrieved successfully.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": ["success", "data"],
+                  "properties": {
+                    "success": { "type": "boolean", "example": true },
+                    "data": { "$ref": "#/components/schemas/OverallStats" }
+                  }
+                }
+              }
+            }
+          },
+          "500": { "$ref": "#/components/responses/InternalServerError" }
+        }
+      }
+    },
+    "/debug/trigger-job/{jobName}": {
+      "post": {
+        "tags": ["Debug"],
+        "summary": "Manually trigger a scheduled job",
+        "description": "**FOR DEVELOPMENT/ADMIN USE ONLY.** Triggers a specific backend cron job to run immediately. This can be used for testing reward distribution, counter resets, or treasury sweeps without waiting for the scheduled time. The job runs asynchronously in the backend.",
+        "parameters": [
+          {
+            "name": "jobName",
+            "in": "path",
+            "required": true,
+            "description": "The name of the job to trigger. Ensure the backend is configured with the necessary permissions and funds for jobs involving transactions (e.g., reward distribution, treasury sweep).",
+            "schema": {
+              "type": "string",
+              "enum": ["top-referrers", "top-closers", "reset-counters", "treasury-sweep"]
+            }
+          }
+        ],
+        "responses": {
+          "202": {
+            "description": "Job triggered successfully. The job will run asynchronously in the backend.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": { "type": "boolean", "example": true },
+                    "message": { "type": "string", "example": "Job 'Top Referrers Reward' triggered successfully. Check server logs for execution details." }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Job not found. The specified jobName is not recognized.",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorResponse" } } }
+          },
+          "500": { "$ref": "#/components/responses/InternalServerError" }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "ErrorResponse": {
+        "type": "object",
+        "required": ["success", "error"],
+        "properties": {
+          "success": { "type": "boolean", "example": false },
+          "error": { "type": "string", "example": "Specific error message details." },
+          "type": { "type": "string", "description": "(Optional) Specific error type, e.g., from body-parser validation.", "example": "entity.parse.failed" }
+        }
+      },
+      "ReferralInfo": {
+        "type": "object",
+        "description": "Object containing referral and activity statistics for a user. 'Earnings' fields refer to commissions this user has earned by referring others.",
+        "required": [
+            "user", "referrer", "totalEarnings", "referralsCount", "closedAccounts",
+            "weeklyEarnings", "weeklyClosedAccounts", "weeklyReferralsCount",
+            "totalEarningsSol", "weeklyEarningsSol", "totalEarningsLamports", "weeklyEarningsLamports"
+         ],
+        "properties": {
+          "_id": { "type": "string", "example": "60d5ecb8b480093820f718a4", "description":"Database ID (optional, for internal use)" },
+          "user": { "type": "string", "description": "The user's wallet public key (base58 encoded).", "example": "USER_WALLET_PUBKEY_HERE" },
+          "referrer": {
+            "type": ["string", "null"],
+            "description": "The public key (base58 encoded, decrypted) of the original referrer who introduced this user to the platform. Null if the user was not referred or the referrer is invalid.",
+            "example": "ORIGINAL_REFERRER_PUBKEY_HERE"
+          },
+          "totalEarnings": { "type": "number", "description": "Lifetime commission earnings (for referring others) in Lamports.", "example": 150000000 },
+          "referralsCount": { "type": "integer", "description": "Lifetime count of new users this user has originally referred.", "example": 5 },
+          "closedAccounts": { "type": "integer", "description": "Lifetime count of ATAs closed by this user.", "example": 25 },
+          "weeklyEarnings": { "type": "number", "description": "Weekly commission earnings (for referring others) in Lamports.", "example": 50000000 },
+          "weeklyClosedAccounts": { "type": "integer", "description": "Weekly count of ATAs closed by this user.", "example": 10 },
+          "weeklyReferralsCount": { "type": "integer", "description": "Weekly count of new users this user has originally referred.", "example": 2 },
+          "createdAt": { "type": "string", "format": "date-time", "description": "Timestamp of user record creation." },
+          "updatedAt": { "type": "string", "format": "date-time", "description": "Timestamp of last user record update." },
+          "totalEarningsSol": { "type": "number", "format": "double", "description": "Calculated lifetime commission earnings (for referring others) in SOL.", "example": 0.15 },
+          "weeklyEarningsSol": { "type": "number", "format": "double", "description": "Calculated weekly commission earnings (for referring others) in SOL.", "example": 0.05 },
+          "totalEarningsLamports": { "type": "number", "description": "Same as totalEarnings, for explicit clarity.", "example": 150000000 },
+          "weeklyEarningsLamports": { "type": "number", "description": "Same as weeklyEarnings, for explicit clarity.", "example": 50000000 },
+          "isNewUser": { "type": "boolean", "description": "Indicates if this is default data being shown because the user record was not found in the database (optional).", "example": true}
+        }
+      },
+      "LeaderboardReferrerEntry": {
+          "type": "object",
+          "description": "Entry for the top referrers leaderboard.",
+          "required": ["rank", "publicKey", "shortKey", "weeklyEarnings", "totalReferrals"],
+          "properties": {
+              "rank": { "type": "integer", "minimum": 1, "description": "User's rank in the leaderboard." },
+              "publicKey": { "type": "string", "description": "Full wallet public key of the referrer." },
+              "shortKey": { "type": "string", "description": "Shortened wallet key for display purposes." },
+              "weeklyEarnings": { "type": "number", "description": "The referrer's commission earnings in Lamports for the current week (for informational context on the leaderboard)." },
+              "totalReferrals": { "type": "integer", "description": "The total number of new users this referrer has ever brought to the platform (this is the primary sorting key for this leaderboard)." }
+          }
+      },
+      "LeaderboardCloserEntry": {
+           "type": "object",
+           "description": "Entry for the top ATA closers leaderboard.",
+           "required": ["rank", "publicKey", "shortKey", "weeklyClosedAccounts"],
+           "properties": {
+               "rank": { "type": "integer", "minimum": 1, "description": "User's rank in the leaderboard." },
+               "publicKey": { "type": "string", "description": "Full wallet public key of the closer." },
+               "shortKey": { "type": "string", "description": "Shortened wallet key for display." },
+               "weeklyClosedAccounts": { "type": "integer", "description": "Number of ATAs closed by this user during the current week (primary sorting key)." }
+           }
+      },
+      "OverallStats": {
+          "type": "object",
+          "description": "Aggregated statistics for the entire Sol Rebound Pro platform.",
+          "required": ["totalClosedAccounts", "totalSolRecoveredForUsers", "totalSolPaidToReferrers"],
+          "properties": {
+              "totalClosedAccounts": { "type": "integer", "description": "Total number of ATAs closed by all users on the platform." },
+              "totalSolRecoveredForUsers": { "type": "number", "format": "double", "description": "Estimated total SOL (rent) recovered and returned to all users' wallets." },
+              "totalSolPaidToReferrers": { "type": "number", "format": "double", "description": "Total SOL commissions paid out to all referrers (these are paid directly by referred users via the smart contract during ATA closing)." }
+          }
+      }
+    },
+    "responses": {
+        "InternalServerError": {
+            "description": "Internal Server Error. This indicates an unexpected error on the server side.",
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/ErrorResponse" } }
+            }
+        },
+        "BadRequest": {
+             "description": "Bad Request. The request was malformed or contained invalid parameters.",
+             "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorResponse" } } }
+        }
+    },
+    "securitySchemes": {}
+  }
+}
