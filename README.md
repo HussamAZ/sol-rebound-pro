@@ -1,5 +1,12 @@
 # Sol Rebound Pro 🪙✨
 
+> **Note on the Source Code in this Repository**
+>
+> The code in this repository represents an early development version of the Sol Rebound Pro project. It is preserved here for historical and archival purposes. The currently deployed and operational version on `solrebound.com` has undergone significant updates, architectural improvements, and security hardening based on real-world operational feedback.
+>
+> The comprehensive report below accurately describes the final, deployed version of the project, including the correct Mainnet addresses and the current system architecture.
+
+
 **Sol Rebound Pro** is a cutting-edge decentralized application (dApp) built on the Solana network, designed to empower the Solana community. It provides users with a seamless way to discover and close their empty Associated Token Accounts (ATAs), allowing them to recover SOL locked for rent. Beyond basic rent recovery, Sol Rebound Pro features a sophisticated referral system and automated weekly rewards, creating ongoing earning opportunities and fostering a vibrant, engaged ecosystem.
 
 *(This project is proprietary. Usage, redistribution, or modification of this code requires explicit permission from the project owner.)*
