@@ -1,0 +1,76 @@
+/* src/components/PrivacyPolicyPage/PrivacyPolicyPage.module.css */
+
+.pageContainer {
+    padding: 2rem 2.5rem; /* حشو جيد للمحتوى الطويل */
+    margin-top: 30px;
+    margin-bottom: 30px;
+    line-height: 1.7; /* تباعد أسطر جيد للقراءة */
+    font-size: 1rem; /* حجم خط أساسي */
+}
+
+.pageTitle {
+    text-align: center;
+    margin-bottom: 1rem;
+    /* سيتم تطبيق gradient-text-bold من الفئة العامة */
+}
+
+.lastUpdated {
+    text-align: center;
+    font-size: 0.9em;
+    color: #E281E6;
+    margin-bottom: 2rem;
+}
+
+
+
+.sectionTitle {
+    /* استخدام gradient-text-bold أو لون مميز آخر */
+    color: #E281E6;
+    font-size: 1.5em;
+    margin-top: 2.5rem;
+    margin-bottom: 1rem;
+    padding-bottom: 0.5rem;
+    border-bottom: 1px solid rgba(247, 73, 253, 0.3); /* خط فاصل خفيف */
+}
+
+.sectionTitle { 
+
+    color: #E281E6;    
+}
+
+.pageContainer p {
+    margin-bottom: 1rem;
+    color: #ffffff;
+}
+
+.pageContainer ul {
+    margin-bottom: 1rem;
+    padding-left: 25px; /* مسافة بادئة للقوائم النقطية */
+}
+
+.pageContainer li {
+    margin-bottom: 0.5rem;
+    color: #6cfff5;
+    font-weight: 700;
+}
+
+.pageContainer a {
+    color: #87CEFA; /* لون للروابط */
+    text-decoration: none;
+}
+
+.pageContainer a:hover {
+    text-decoration: underline;
+}
+
+@media (max-width: 768px) {
+    .pageContainer {
+        padding: 1.5rem 1rem;
+    }
+    .pageTitle {
+        font-size: 1.8em;
+    }
+    .sectionTitle {
+        font-size: 1.3em;
+    }
+}

@@ -88,3 +88,32 @@ exports.withdrawReferrals = async (req, res, next) => {
         next(error);
     }
 };
+
+exports.getPartnerStats = async (req, res, next) => {
+    try {
+        const { ref_code } = req.query;
+
+        if (!ref_code) {
+            return res.status(400).json({ success: false, message: "Missing ref_code parameter" });
+        }
+
+        const stats = await referralService.getStatsForReferralCode(ref_code);
+
+        if (stats) {
+            // نجح العثور على البيانات
+            res.status(200).json({
+                success: true,
+                data: stats
+            });
+        } else {
+            // لم يتم العثور على الرمز
+            res.status(404).json({
+                success: false,
+                message: "Invalid referral code"
+            });
+        }
+    } catch (error) {
+        console.error("!!! Controller Error in getPartnerStats:", error);
+        next(error); // مرر الخطأ للمعالج العام
+    }
+};

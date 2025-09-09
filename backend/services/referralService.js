@@ -5,234 +5,302 @@ const { MIN_REFERRAL_WITHDRAW_SOL, LAMPORTS_PER_SOL, REFERRAL_COMMISSION_PERCENT
 const { PublicKey } = require('@solana/web3.js');
 const crypto = require('crypto'); // استيراد crypto هنا
 
-// --- دالة فك التشفير المحلية ---
-function decryptDataLocal(encryptedDataWithMeta) {
-    console.log(`DECRYPT_LOCAL_DEBUG: decryptDataLocal called with: [${encryptedDataWithMeta}] (Type: ${typeof encryptedDataWithMeta})`);
+// دالة لتشفير البيانات باستخدام AES-256-GCM
+function encryptData(data) {
     const ENCRYPTION_KEY = process.env.ENCRYPTION_KEY;
-
     if (!ENCRYPTION_KEY || ENCRYPTION_KEY.length !== 64) {
-        console.warn("DECRYPT_LOCAL_DEBUG: Decryption skipped: Key missing or invalid. Returning as is.");
-        return encryptedDataWithMeta;
+        console.error("CRITICAL: ENCRYPTION_KEY is missing or invalid. Cannot encrypt data.");
+        return data;
     }
-    if (!encryptedDataWithMeta || typeof encryptedDataWithMeta !== 'string' || !encryptedDataWithMeta.includes(':')) {
-        console.warn("DECRYPT_LOCAL_DEBUG: Decryption skipped: Data format incorrect (not string or no ':'). Value:", encryptedDataWithMeta);
-        return encryptedDataWithMeta;
+    // تحقق لمنع التشفير المزدوج
+    if (typeof data === 'string' && data.includes(':') && data.split(':').length === 3) {
+        console.warn("Attempting to double-encrypt data. Returning value as is:", data);
+        return data;
     }
-
     try {
-        const parts = encryptedDataWithMeta.split(':');
-        if (parts.length !== 3) {
-            console.warn("DECRYPT_LOCAL_DEBUG: Decryption skipped: Invalid encrypted data format (not 3 parts). Value:", encryptedDataWithMeta);
-            return encryptedDataWithMeta;
-        }
-        const [ivHex, authTagHex, encryptedHex] = parts;
-        // التحقق من أن الأجزاء هي سلاسل سداسية صالحة (اختياري لكن جيد)
-        if (!/^[0-9a-fA-F]+$/.test(ivHex) || !/^[0-9a-fA-F]+$/.test(authTagHex) || !/^[0-9a-fA-F]+$/.test(encryptedHex)) {
-            console.warn("DECRYPT_LOCAL_DEBUG: Decryption skipped: One of the hex parts is invalid. Value:", encryptedDataWithMeta);
-            return encryptedDataWithMeta;
-        }
-
-        const iv = Buffer.from(ivHex, 'hex');
-        const authTag = Buffer.from(authTagHex, 'hex');
         const algorithm = 'aes-256-gcm';
-        const decipher = crypto.createDecipheriv(algorithm, Buffer.from(ENCRYPTION_KEY, 'hex'), iv);
-        decipher.setAuthTag(authTag);
-        let decrypted = decipher.update(encryptedHex, 'hex', 'utf8');
-        decrypted += decipher.final('utf8');
-        console.log(`DECRYPT_LOCAL_DEBUG: Decryption successful. Original: [${encryptedDataWithMeta}], Decrypted: [${decrypted}]`);
-        return decrypted;
+        const iv = crypto.randomBytes(12);
+        const cipher = crypto.createCipheriv(algorithm, Buffer.from(ENCRYPTION_KEY, 'hex'), iv);
+        let encrypted = cipher.update(String(data), 'utf8', 'hex');
+        encrypted += cipher.final('hex');
+        const authTag = cipher.getAuthTag();
+        return `${iv.toString('hex')}:${authTag.toString('hex')}:${encrypted}`;
     } catch (error) {
-        console.error("DECRYPT_LOCAL_DEBUG: Decryption failed for data:", encryptedDataWithMeta, "Error:", error.message);
-        // في حالة فشل فك التشفير، من الأفضل إرجاع القيمة الأصلية بدلاً من رمي خطأ قد يوقف العملية
-        return encryptedDataWithMeta;
+        console.error("Encryption failed:", error);
+        return String(data);
     }
 }
 
 
+// أضف هذه الدالة في بداية الملف
+function generateReferralCode(length = 6) {
+    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+    let result = '';
+    for (let i = 0; i < length; i++) {
+        result += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+    return result;
+}
+
 /**
- * يبحث عن سجل المستخدم أو ينشئه. إذا كان المستخدم جديدًا، يتم تعيين المحيل (إن وجد).
- * لا يقوم بتحديث أي عدادات أخرى.
+ * (النسخة النهائية والمعدلة)
+ * يبحث عن سجل المستخدم أو ينشئه. يعتمد على getter في الموديل لفك التشفير تلقائيًا.
  * @param {string} userPublicKeyString - المفتاح العام للمستخدم.
- * @param {string|null} potentialReferrerKeyString - المفتاح العام للمحيل المحتمل (من URL مثلاً).
- * @returns {Promise<{record: object, wasCreated: boolean}>} - كائن يحتوي على سجل المستخدم (مع المحيل مفكوكًا) وعلامة تشير إلى ما إذا كان قد تم إنشاؤه.
+ * @param {string|null} potentialReferrerKeyString - المفتاح العام للمحيل المحتمل.
+ * @returns {Promise<{record: object, wasCreated: boolean}>} - كائن يحتوي على سجل المستخدم وعلامة الإنشاء.
  */
 async function findOrCreateUserOnly(userPublicKeyString, potentialReferrerKeyString) {
     console.log(`ReferralService (findOrCreateUserOnly): User=${userPublicKeyString}, PotentialReferrer=${potentialReferrerKeyString || 'None'}`);
-    let userRecordRaw = await Referral.findOne({ user: userPublicKeyString }).lean(); // جلب الكائن الخام
+
+    // الخطوة 1: ابحث عن المستخدم باستخدام .lean() مع تفعيل getters
+    // هذا سيضمن أن حقل 'referrer' سيتم فك تشفيره تلقائيًا إذا وجد
+    let userRecordDoc = await Referral.findOne({ user: userPublicKeyString });
+    let userRecord = userRecordDoc ? userRecordDoc.toObject() : null;
 
     let wasCreated = false;
-    let finalUserRecord;
 
-    if (!userRecordRaw) {
+    // الخطوة 2: إذا لم يتم العثور على المستخدم، قم بإنشاء سجل جديد
+    if (!userRecord) {
+        wasCreated = true;
         let referrerToSet = null;
+
         if (potentialReferrerKeyString) {
             try {
-                const referrerKeyObj = new PublicKey(potentialReferrerKeyString);
-                const userKeyObj = new PublicKey(userPublicKeyString);
-                if (!referrerKeyObj.equals(userKeyObj)) {
+                // تحقق من أن المحيل ليس هو المستخدم نفسه
+                if (potentialReferrerKeyString !== userPublicKeyString) {
+                    // لا نحتاج للتحقق من وجود المحيل هنا، فقط نثق في المدخلات.
+                    // عملية التحقق من صحة المحيل يمكن أن تتم في طبقة أعلى إذا لزم الأمر.
                     referrerToSet = potentialReferrerKeyString;
                 } else {
-                     console.warn(`ReferralService (findOrCreateUserOnly): Attempted to set referrer to the user themselves (${userPublicKeyString}). Setting referrer to null.`);
+                     console.warn(`ReferralService: Attempted to set referrer to the user themselves. Ignoring.`);
                 }
             } catch (e) {
-                console.error(`ReferralService (findOrCreateUserOnly): Invalid potentialReferrerKeyString format (${potentialReferrerKeyString}). Setting referrer to null. Error: ${e.message}`);
+                 console.error(`ReferralService: Invalid potentialReferrerKeyString format provided: ${potentialReferrerKeyString}. Error: ${e.message}`);
             }
         }
-        console.log(`ReferralService (findOrCreateUserOnly): User ${userPublicKeyString} not found. Creating with referrer for DB: ${referrerToSet || 'None'} (will be encrypted by model setter)`);
+        
+        console.log(`ReferralService: User not found. Creating new record with referrer: ${referrerToSet || 'None'}`);
+        
+        // عند الإنشاء، سيقوم 'setter' في الموديل بتشفير حقل 'referrer' تلقائيًا
         const createdUser = await Referral.create({
             user: userPublicKeyString,
-            referrer: referrerToSet, // الموديل سيقوم بتشفيره عند الحفظ
+            referrer: referrerToSet,
         });
-        finalUserRecord = createdUser.toObject(); // تحويله لكائن عادي بعد الإنشاء
-        wasCreated = true;
+
+        // استخدم .toObject() لتحويل مستند Mongoose إلى كائن عادي،
+        // وهذا سيقوم بتطبيق 'getter' لفك تشفير حقل 'referrer' الذي تم تشفيره للتو.
+        userRecord = createdUser.toObject();
+
     } else {
-        finalUserRecord = userRecordRaw; // استخدم الكائن الخام من .lean()
+        console.log(`ReferralService: Found existing user record for ${userPublicKeyString}.`);
+        // userRecord هنا بالفعل يحتوي على حقل referrer مفكوك التشفير بفضل .lean({ getters: true })
     }
 
-    // فك تشفير المحيل يدويًا هنا بعد جلبه أو إنشائه
-    if (finalUserRecord.referrer) {
-        finalUserRecord.referrer = decryptDataLocal(finalUserRecord.referrer);
-    }
-    console.log(`ReferralService (findOrCreateUserOnly): Returning. User: ${userPublicKeyString}, Referrer in finalUserRecord (after manual decrypt): ${finalUserRecord.referrer || 'None'}, WasCreated: ${wasCreated}`);
-    return { record: finalUserRecord, wasCreated };
+    // الخطوة 3: إرجاع النتيجة
+    // لا حاجة لفك تشفير يدوي هنا على الإطلاق.
+    console.log(`ReferralService (findOrCreateUserOnly): Returning. Referrer (from getter): ${userRecord.referrer || 'None'}, WasCreated: ${wasCreated}`);
+    return { record: userRecord, wasCreated };
 }
 
 /**
- * يبحث عن سجل المستخدم أو ينشئه، ويقوم بتحديث عدادات الإغلاق.
- * يحدد ما إذا كانت هذه هي أول عملية إغلاق لمستخدم جديد تمت إحالته.
+ * (النسخة النهائية والمعدلة)
+ * يعالج عملية تأكيد الإغلاق، ويحدث عدادات المستخدم، ويحدد ما إذا كانت هذه هي أول عملية إغلاق ناجحة للمستخدم.
  * @param {string} userPublicKeyString - المفتاح العام للمستخدم.
- * @param {number} numberOfClosedAccounts - عدد الحسابات التي تم إغلاقها في هذه المعاملة.
- * @param {string|null} referrerFromUrlIfAny - المفتاح العام للمحيل من URL (يُستخدم فقط إذا كان المستخدم جديدًا).
- * @returns {Promise<{userRecord: object, wasNewUserWithReferrer: boolean}>} - كائن يحتوي على سجل المستخدم المحدث (مع المحيل مفكوكًا) وعلامة تشير إلى تسجيل إحالة جديدة.
+ * @param {number} numberOfClosedAccounts - عدد الحسابات المغلقة.
+ * @param {string|null} referrerFromUrlIfAny - المفتاح العام للمحيل من URL (لربط المستخدم الجديد فقط).
+ * @returns {Promise<{userRecord: object, wasFirstEverCloseAction: boolean}>} - كائن يحتوي على سجل المستخدم المحدث، وعلامة تشير إلى ما إذا كانت هذه أول عملية إغلاق.
  */
 async function findOrCreateUserAndUpdateCounts(userPublicKeyString, numberOfClosedAccounts, referrerFromUrlIfAny) {
     console.log(`ReferralService (findOrCreateUserAndUpdateCounts): User=${userPublicKeyString}, Closed=${numberOfClosedAccounts}, ReferrerFromUrl=${referrerFromUrlIfAny || 'None'}`);
 
-    const { record: initialUserRecord, wasCreated: wasJustCreatedNow } = await findOrCreateUserOnly(userPublicKeyString, referrerFromUrlIfAny);
-    // initialUserRecord.referrer هنا سيكون مفكوك التشفير بسبب التعديل في findOrCreateUserOnly
+    // الخطوة 1: ابحث عن المستخدم أولاً دون تعديل أي شيء
+    const initialUserDoc = await Referral.findOne({ user: userPublicKeyString });
 
-    let wasNewUserWithReferrer = false;
-    if (wasJustCreatedNow && initialUserRecord.referrer) {
-        wasNewUserWithReferrer = true;
-        console.log(`ReferralService (findOrCreateUserAndUpdateCounts): User ${userPublicKeyString} was newly created AND has an initial referrer ${initialUserRecord.referrer}. Setting wasNewUserWithReferrer=true.`);
+    let wasFirstEverCloseAction = false;
+    
+    // الخطوة 2: تحقق مما إذا كانت هذه هي أول عملية إغلاق
+    // إذا لم يكن هناك سجل، أو كان عدد الإغلاقات صفرًا، فهذه هي المرة الأولى.
+    if (!initialUserDoc || initialUserDoc.closedAccounts === 0) {
+        wasFirstEverCloseAction = true;
+        console.log(`ReferralService: Detected first-ever close action for user ${userPublicKeyString}.`);
     }
 
-    console.log(`ReferralService (findOrCreateUserAndUpdateCounts): Updating closed accounts counts for user ${userPublicKeyString}.`);
-    let updatedUserRecordRaw = await Referral.findOneAndUpdate(
+    // الخطوة 3: قم بإنشاء/تحديث سجل المستخدم وزيادة عدادات الإغلاق
+    // نستخدم findOneAndUpdate مع upsert: true لدمج منطق الإنشاء والتحديث
+    const updatedUserDoc = await Referral.findOneAndUpdate(
         { user: userPublicKeyString },
-        { $inc: { closedAccounts: numberOfClosedAccounts, weeklyClosedAccounts: numberOfClosedAccounts }},
-        { new: true, upsert: false } // لا نحتاج upsert
-    ).lean(); // جلب الكائن الخام
-
-    if (!updatedUserRecordRaw) {
-        console.error(`!!! CRITICAL: Failed to find and update user ${userPublicKeyString} after findOrCreateUserOnly.`);
-        throw new Error(`Failed to update existing user record for ${userPublicKeyString} after initial creation/check.`);
+        { 
+            $inc: { 
+                closedAccounts: numberOfClosedAccounts, 
+                weeklyClosedAccounts: numberOfClosedAccounts 
+            },
+            // استخدم $setOnInsert لتعيين المحيل فقط عند إنشاء السجل لأول مرة
+            // هذا يمنع تغيير المحيل الأصلي في المستقبل
+            $setOnInsert: { 
+                referrer: referrerFromUrlIfAny && referrerFromUrlIfAny !== userPublicKeyString ? referrerFromUrlIfAny : null
+            }
+        },
+        { 
+            new: true, // أرجع المستند المحدث
+            upsert: true, // أنشئ المستند إذا لم يكن موجودًا
+            setDefaultsOnInsert: true
+        }
+    );
+    
+    if (!updatedUserDoc) {
+        // هذا السيناريو لا يجب أن يحدث مع upsert: true، ولكنه احترازي
+        throw new Error(`Failed to find or create user record for ${userPublicKeyString}.`);
     }
+    
+    // الخطوة 4: حوّل المستند إلى كائن عادي لتطبيق الـ getters بشكل صحيح
+    const updatedUserRecord = updatedUserDoc.toObject();
 
-    // فك تشفير المحيل يدويًا للسجل المحدث
-    if (updatedUserRecordRaw.referrer) {
-        updatedUserRecordRaw.referrer = decryptDataLocal(updatedUserRecordRaw.referrer);
-    }
-    console.log(`ReferralService (findOrCreateUserAndUpdateCounts): User ${userPublicKeyString} record updated. Referrer in updatedUserRecord (after manual decrypt): ${updatedUserRecordRaw.referrer || 'None'}`);
+    console.log(`ReferralService: User record for ${userPublicKeyString} is now updated. Referrer: ${updatedUserRecord.referrer || 'None'}`);
 
-    return { userRecord: updatedUserRecordRaw, wasNewUserWithReferrer };
+    // الخطوة 5: أرجع السجل المحدث والعلامة التي تحدد ما إذا كانت هذه أول عملية
+    return { userRecord: updatedUserRecord, wasFirstEverCloseAction: wasFirstEverCloseAction };
 }
 
 /**
- * يقوم بتحديث سجل المحيل الفعلي بناءً على عمولة الإحالة وإذا كانت إحالة جديدة.
- * @param {string|null} actualReferrerInDB - المفتاح العام للمحيل الأصلي (مفكوك التشفير).
+ * (النسخة النهائية والمعدلة)
+ * يقوم بتحديث إحصائيات المحيل (الأرباح، وعداد الإحالات إذا لزم الأمر).
+ * @param {string|null} actualReferrerInDB - المفتاح العام للمحيل.
  * @param {bigint} platformFeeLamportsBigInt - إجمالي رسوم المنصة.
- *  @param {boolean} incrementReferralCounters - هل يجب زيادة عدادات الإحالة لهذا المحيل؟
+ * @param {boolean} isFirstEverCloseAction - هل هذه أول عملية إغلاق للمستخدم المُحال؟
  */
-async function updateReferrerStats(actualReferrerInDB, platformFeeLamportsBigInt, incrementReferralCounters) { // المعلمة الثالثة هنا صحيحة
-    console.log(`ReferralService (updateReferrerStats): Updating stats for actualReferrerInDB=${actualReferrerInDB || 'None'}, incrementCounters=${incrementReferralCounters}`);
-
-    // لا تقم بأي تحديث إذا لم يكن هناك محيل أو إذا لم تكن هناك أرباح لتضاف *و* لم نطلب زيادة العدادات
-    if (!actualReferrerInDB || (platformFeeLamportsBigInt <= 0 && !incrementReferralCounters)) {
-        console.log("ReferralService (updateReferrerStats): Skipping referrer update (no actual referrer, or nothing to update).");
+async function updateReferrerStats(actualReferrerInDB, platformFeeLamportsBigInt, isFirstEverCloseAction) {
+    if (!actualReferrerInDB) {
+        console.log("ReferralService (updateReferrerStats): No actual referrer. Skipping update.");
         return;
     }
 
-    let commissionAsNumber = 0;
+    const updateData = { $inc: {} };
+    let logMessage = `Updating stats for referrer ${actualReferrerInDB}:`;
+
+    // 1. تحديث الأرباح دائمًا إذا كانت هناك رسوم
     if (platformFeeLamportsBigInt > 0) {
         const referralCommissionLamportsBigInt = (platformFeeLamportsBigInt * BigInt(REFERRAL_COMMISSION_PERCENT_CONTRACT)) / BigInt(100);
-        commissionAsNumber = Number(referralCommissionLamportsBigInt);
+        const commissionAsNumber = Number(referralCommissionLamportsBigInt);
+        
+        if (commissionAsNumber > 0) {
+            updateData.$inc.totalEarnings = commissionAsNumber;
+            updateData.$inc.weeklyEarnings = commissionAsNumber;
+            logMessage += ` Earnings +${commissionAsNumber}.`;
+        }
     }
 
-    const referrerUpdateIncData = {};
-    if (commissionAsNumber > 0) {
-        referrerUpdateIncData.totalEarnings = commissionAsNumber;
-        referrerUpdateIncData.weeklyEarnings = commissionAsNumber;
-    }
-    // زد عدادات الإحالة فقط إذا طُلب ذلك صراحة
-    if (incrementReferralCounters) {
-        referrerUpdateIncData.referralsCount = 1;
-        referrerUpdateIncData.weeklyReferralsCount = 1;
-        console.log(`ReferralService (updateReferrerStats): Incrementing referral counts for ${actualReferrerInDB} because incrementReferralCounters is true.`);
+    // 2. تحديث عدادات الإحالة فقط إذا كانت هذه هي أول عملية إغلاق ناجحة للمُحال
+    if (isFirstEverCloseAction) {
+        updateData.$inc.referralsCount = 1;
+        updateData.$inc.weeklyReferralsCount = 1;
+        logMessage += ` Referrals +1.`;
     }
 
-    if (Object.keys(referrerUpdateIncData).length === 0) {
-        console.log(`ReferralService (updateReferrerStats): No data to increment for actual referrer ${actualReferrerInDB}. Skipping DB update.`);
+    // 3. قم بتنفيذ التحديث فقط إذا كان هناك شيء لتحديثه
+    if (Object.keys(updateData.$inc).length === 0) {
+        console.log(`ReferralService (updateReferrerStats): No earnings or counters to update for referrer ${actualReferrerInDB}.`);
         return;
     }
 
+    console.log(logMessage);
     try {
-        console.log(`ReferralService (updateReferrerStats): Updating actual referrer ${actualReferrerInDB}. Increment Data:`, referrerUpdateIncData);
         await Referral.findOneAndUpdate(
             { user: actualReferrerInDB },
-            { $inc: referrerUpdateIncData },
-            { new: true, upsert: true, setDefaultsOnInsert: true }
+            updateData,
+            { upsert: true, setDefaultsOnInsert: true }
         );
-        console.log(`ReferralService (updateReferrerStats): Actual referrer ${actualReferrerInDB} stats updated successfully.`);
-    } catch (referrerUpdateError) {
-        console.error(`!!! ReferralService ERROR updating actual referrer record for ${actualReferrerInDB} !!!`, referrerUpdateError);
+        console.log(`ReferralService: Referrer stats for ${actualReferrerInDB} updated successfully.`);
+    } catch (error) {
+        console.error(`!!! ReferralService ERROR updating referrer stats for ${actualReferrerInDB}:`, error);
     }
 }
 
 /**
- * يجلب معلومات الإحالة لمستخدم معين.
+ * (النسخة النهائية والمعدلة)
+ * يجلب معلومات الإحالة لمستخدم معين. إذا كان المستخدم موجودًا وليس لديه رمز إحالة،
+ * فسيتم إنشاء رمز فريد وتعيينه له وحفظه في قاعدة البيانات.
  * @param {string} userPublicKeyString - المفتاح العام للمستخدم.
- * @returns {Promise<object>} - كائن يحتوي على بيانات الإحالة (المحيل مفكوك التشفير).
+ * @returns {Promise<object>} - كائن يحتوي على بيانات الإحالة الكاملة.
  */
 async function getReferralInfo(userPublicKeyString) {
     console.log(`ReferralService (getReferralInfo): Querying for user: ${userPublicKeyString}`);
-    let referralDataRaw;
-    try { // <--- إضافة try هنا
-        referralDataRaw = await Referral.findOne({ user: userPublicKeyString }).lean();
-    } catch (dbError) { // <--- إضافة catch هنا
+    let userRecord;
+    try {
+        // الخطوة 1: ابحث عن مستند Mongoose أولاً (بدون .lean() أو .toObject())
+        let userRecordDoc = await Referral.findOne({ user: userPublicKeyString });
+
+        // الخطوة 2: إذا وجدنا المستخدم ولكنه يفتقر إلى رمز إحالة، قم بإنشاء واحد.
+        if (userRecordDoc && !userRecordDoc.referralCode) {
+            console.log(`User ${userPublicKeyString} found but has no referral code. Generating one...`);
+            let newCode;
+            let codeExists = true;
+            let attempts = 0;
+            const MAX_ATTEMPTS = 10; // لمنع حلقة لا نهائية
+
+            while (codeExists && attempts < MAX_ATTEMPTS) {
+                attempts++;
+                newCode = generateReferralCode();
+                const existingUserWithCode = await Referral.findOne({ referralCode: newCode }).select('_id');
+                if (!existingUserWithCode) {
+                    codeExists = false;
+                }
+            }
+            
+            if (!codeExists) {
+                console.log(`Assigning new, unique referral code '${newCode}' to user ${userPublicKeyString}`);
+                userRecordDoc.referralCode = newCode;
+                try {
+                    // احفظ التغيير في قاعدة البيانات، وأعد تعيين userRecordDoc بالمستند المحدث
+                    userRecordDoc = await userRecordDoc.save(); 
+                } catch (saveError) {
+                    console.error(`Error saving new referral code for user ${userPublicKeyString}. This might happen in a race condition. The user will be served without a code for now. Error:`, saveError.message);
+                    // في حالة حدوث خطأ نادر، استمر بدونه لهذه المرة
+                    userRecordDoc = await Referral.findOne({ user: userPublicKeyString });
+                }
+            } else {
+                 console.error(`Could not generate a unique referral code after ${MAX_ATTEMPTS} attempts. The user will be served without a code for now.`);
+            }
+        }
+        
+        // الخطوة 3: الآن، قم بتحويل المستند إلى كائن عادي لتطبيق getters
+        userRecord = userRecordDoc ? userRecordDoc.toObject() : null;
+
+    } catch (dbError) {
         console.error(`ReferralService (getReferralInfo): DB error querying for ${userPublicKeyString}:`, dbError.message);
-        referralDataRaw = null; // اعتبره كأن المستخدم غير موجود عند حدوث خطأ في DB
+        userRecord = null; // تعامل مع خطأ قاعدة البيانات كأن المستخدم غير موجود
     }
 
     let finalReferralData;
 
-    if (referralDataRaw) {
-        if (referralDataRaw.referrer) {
-            referralDataRaw.referrer = decryptDataLocal(referralDataRaw.referrer);
-        }
+    // الخطوة 4: إذا وجدنا السجل (أو تم تحديثه)، قم بتنسيقه وإضافة الحقول المحسوبة
+    if (userRecord) {
+        console.log(`ReferralService (getReferralInfo): Data found. Referrer (from getter) is: ${userRecord.referrer || 'None'}. Code: ${userRecord.referralCode || 'N/A'}`);
+        // لا حاجة لفك تشفير يدوي هنا على الإطلاق
         finalReferralData = {
-            ...referralDataRaw,
-            totalEarningsSol: (referralDataRaw.totalEarnings || 0) / LAMPORTS_PER_SOL,
-            weeklyEarningsSol: (referralDataRaw.weeklyEarnings || 0) / LAMPORTS_PER_SOL,
-            closedAccounts: referralDataRaw.closedAccounts || 0,
-            referralsCount: referralDataRaw.referralsCount || 0,
-            weeklyClosedAccounts: referralDataRaw.weeklyClosedAccounts || 0,
-            weeklyReferralsCount: referralDataRaw.weeklyReferralsCount || 0,
-            totalEarningsLamports: referralDataRaw.totalEarnings || 0,
-            weeklyEarningsLamports: referralDataRaw.weeklyEarnings || 0,
+            ...userRecord,
+            totalEarningsSol: (userRecord.totalEarnings || 0) / LAMPORTS_PER_SOL,
+            weeklyEarningsSol: (userRecord.weeklyEarnings || 0) / LAMPORTS_PER_SOL,
+            closedAccounts: userRecord.closedAccounts || 0,
+            referralsCount: userRecord.referralsCount || 0,
+            weeklyClosedAccounts: userRecord.weeklyClosedAccounts || 0,
+            weeklyReferralsCount: userRecord.weeklyReferralsCount || 0,
+            totalEarningsLamports: userRecord.totalEarnings || 0,
+            weeklyEarningsLamports: userRecord.weeklyEarnings || 0,
         };
-        console.log(`ReferralService (getReferralInfo): Data found. Referrer (manual decrypt): ${finalReferralData.referrer || 'None'}`);
     } else {
-        console.log(`ReferralService (getReferralInfo): No data for ${userPublicKeyString} (or DB error). Returning default structure.`); // تعديل الرسالة
+        // الخطوة 5: إذا لم يتم العثور على السجل، قم بإنشاء كائن افتراضي
+        console.log(`ReferralService (getReferralInfo): No data for ${userPublicKeyString}. Returning default structure.`);
         finalReferralData = {
-            user: userPublicKeyString, referrer: null, totalEarnings: 0, referralsCount: 0,
+            user: userPublicKeyString, referrer: null, referralCode: null, totalEarnings: 0, referralsCount: 0,
             closedAccounts: 0, weeklyEarnings: 0, weeklyClosedAccounts: 0, weeklyReferralsCount: 0,
             createdAt: new Date(), updatedAt: new Date(), totalEarningsSol: 0.0, weeklyEarningsSol: 0.0,
             totalEarningsLamports: 0, weeklyEarningsLamports: 0, isNewUser: true
         };
     }
+    
     return finalReferralData;
 }
+
 
 /**
  * يتحقق مما إذا كان المستخدم مؤهلاً لسحب أرباحه.
@@ -371,6 +439,105 @@ async function getTotalOutstandingReferralFees() {
      }
 }
 
+/**
+ * يعالج معاملة إغلاق ناجحة. يقوم بإنشاء المستخدم إذا لم يكن موجودًا،
+ * ويربطه بالمحيل، ويزيد عدادات الإغلاق.
+ * @param {string} userPublicKeyString - المستخدم الذي قام بالإغلاق.
+ * @param {number} closedCount - عدد الحسابات المغلقة.
+ * @param {string|null} referrerFromUrl - المحيل المحتمل من الواجهة.
+ * @returns {Promise<{actualReferrer: string|null, wasNewUser: boolean}>}
+ */
+async function processSuccessfulClose(userPublicKeyString, closedCount, referrerFromUrl) {
+    let userRecord = await Referral.findOne({ user: userPublicKeyString });
+    
+    let wasNewUser = false;
+    let actualReferrer = null;
+
+    if (!userRecord) {
+        // المستخدم جديد تمامًا
+        wasNewUser = true;
+        
+        let referrerToSet = null;
+        if (referrerFromUrl && referrerFromUrl !== userPublicKeyString) {
+            referrerToSet = referrerFromUrl;
+        }
+
+        userRecord = await Referral.create({
+            user: userPublicKeyString,
+            referrer: referrerToSet,
+            closedAccounts: closedCount,
+            weeklyClosedAccounts: closedCount,
+            // referralCode: ... (إذا كنت تستخدمه)
+        });
+        
+        actualReferrer = referrerToSet;
+        
+    } else {
+        // المستخدم موجود بالفعل، فقط قم بزيادة عدادات الإغلاق
+        userRecord.closedAccounts += closedCount;
+        userRecord.weeklyClosedAccounts += closedCount;
+        await userRecord.save();
+        
+        // المحيل الفعلي هو المحيل المسجل بالفعل في قاعدة البيانات
+        // نحتاج إلى فك تشفيره (لأننا لم نستخدم .lean({getters:true}))
+        actualReferrer = userRecord.get('referrer'); 
+    }
+
+    return { actualReferrer, wasNewUser };
+}
+
+async function findUserByCode(code) {
+    if (!code) return null;
+    return await Referral.findOne({ referralCode: code }).lean({ getters: true });
+}
+
+/**
+ * يحصل على إحصائيات مجمعة لشريك معين بناءً على رمز الإحالة الخاص به.
+ * @param {string} refCode - رمز الإحالة الخاص بالشريك.
+ * @returns {Promise<object|null>} - كائن يحتوي على الإحصائيات، أو null إذا كان الرمز غير صالح.
+ */
+async function getStatsForReferralCode(refCode) {
+    if (!refCode) return null;
+
+    // 1. ابحث عن المستخدم (الشريك) صاحب رمز الإحالة
+    const partner = await Referral.findOne({ referralCode: refCode.toUpperCase() }).lean();
+
+    if (!partner) {
+        return null; // الرمز غير موجود
+    }
+
+    // 2. احصل على الإحصائيات المباشرة من سجل الشريك
+    const userCount = partner.referralsCount || 0;
+    const totalEarningsLamports = partner.totalEarnings || 0;
+    const totalEarningsSOL = totalEarningsLamports / LAMPORTS_PER_SOL;
+
+    // 3. احسب إجمالي المعاملات من جميع المستخدمين الذين أحالهم هذا الشريك
+    // هذا هو الجزء الأكثر تعقيدًا لأنه يتطلب تجميع البيانات
+    const referredUsersStats = await Referral.aggregate([
+        {
+            // ابحث عن جميع المستخدمين الذين محيلهم هو هذا الشريك
+            // ملاحظة: يجب علينا تشفير عنوان الشريك للبحث في الحقل المشفر
+            $match: { referrer: encryptData(partner.user) } // `encryptData` يجب أن تكون متاحة في هذا النطاق
+        },
+        {
+            // قم بتجميعهم وحساب مجموع إغلاقاتهم
+            $group: {
+                _id: null,
+                totalTransactions: { $sum: "$closedAccounts" }
+            }
+        }
+    ]);
+
+    const transactionCount = referredUsersStats.length > 0 ? referredUsersStats[0].totalTransactions : 0;
+
+    // 4. أعد الكائن النهائي بالصيغة المطلوبة
+    return {
+        userCount,
+        transactionCount,
+        totalEarningsSOL: parseFloat(totalEarningsSOL.toFixed(6)) // تقريب لـ 6 خانات عشرية
+    };
+}
+
 module.exports = {
     findOrCreateUserAndUpdateCounts,
     updateReferrerStats,
@@ -382,4 +549,8 @@ module.exports = {
     resetAllWeeklyCounters,
     getTotalOutstandingReferralFees,
     findOrCreateUserOnly,
+    processSuccessfulClose,
+    findUserByCode,
+    getStatsForReferralCode,
 };
+

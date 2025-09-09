@@ -7,6 +7,7 @@ const { REFERRAL_COMMISSION_PERCENT_CONTRACT } = require('../config/constants');
  * @param {bigint} netFeeToTreasuryLamports - صافي الربح بالـ lamports.
  * @param {string} signature - توقيع المعاملة.
  * @param {string} userPublicKeyString - المفتاح العام للمستخدم.
+ * @param {number} closedCount - عدد الحسابات التي تم إغلاقها في هذه المعاملة.
  */
 /**
  * يحسب صافي رسوم المنصة بعد خصم عمولة الإحالة (إن وجدت).
@@ -29,32 +30,29 @@ function calculateNetFeeToTreasury(platformFeeLamportsBigInt, hasReferrer) {
     return netFee;
 }
 
-async function recordPlatformEarning(netFeeToTreasuryLamports, signature, userPublicKeyString) {
-    // تحويل BigInt إلى Number لتخزينه
+async function recordPlatformEarning(netFeeToTreasuryLamports, signature, userPublicKeyString, closedCount) {
     const amountToStore = Number(netFeeToTreasuryLamports);
 
-    if (amountToStore <= 0) {
-        console.log("PlatformEarningService: Net fee to treasury is zero or negative, not recording.");
+    if (amountToStore <= 0 && closedCount <= 0) {
+        console.log("PlatformEarningService: Net fee and closed count are zero, not recording.");
         return;
     }
 
-    console.log(`PlatformEarningService: Recording platform earning of ${amountToStore} lamports from tx ${signature}`);
+    console.log(`PlatformEarningService: Recording platform earning of ${amountToStore} lamports for ${closedCount} closed accounts from tx ${signature}`);
     try {
         await PlatformEarning.create({
             amount: amountToStore,
-            timestamp: new Date(), // يمكن استخدام الوقت الحالي أو وقت المعاملة إذا كان متاحًا
+            closedCount: closedCount, // <-- تسجيل القيمة الجديدة
+            timestamp: new Date(),
             transactionSignature: signature,
             userPublicKey: userPublicKeyString
         });
         console.log(`PlatformEarningService: Successfully recorded platform earning for tx ${signature}`);
     } catch (earningSaveError) {
-        // التعامل مع خطأ المفتاح المكرر (unique) بشكل خاص
-        if (earningSaveError.code === 11000) { // MongoError: Duplicate key
+        if (earningSaveError.code === 11000) {
             console.warn(`PlatformEarningService: Platform earning for tx ${signature} already recorded.`);
         } else {
             console.error(`!!! PlatformEarningService CRITICAL: Failed to save platform earning for tx ${signature} !!!`, earningSaveError);
-            // إرسال تنبيه للمراقبة
-            // لا يجب أن يوقف هذا الخطأ استجابة المستخدم النهائية إذا كانت العملية الأساسية ناجحة
         }
     }
 }
@@ -98,3 +96,4 @@ module.exports = {
     recordPlatformEarning,
     getTotalPlatformEarningsForPeriod,
 };
+

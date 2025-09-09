@@ -102,6 +102,17 @@
 .leaderboardTable tbody tr:last-child {
     border-bottom: none;
 }
+/* حاوية لجعل الجدول قابلاً للتمرير الأفقي */
+.tableResponsiveWrapper {
+    overflow-x: auto; /* أهم خاصية: أضف تمرير أفقي عند الحاجة */
+    -webkit-overflow-scrolling: touch; /* لتحسين تجربة التمرير على iOS */
+    
+    /* (اختياري) إضافة حدود أو ظلال للإشارة إلى إمكانية التمرير */
+    border-radius: 6px;
+    /* يمكنك إضافة ظل داخلي خفيف إذا أردت */
+    /* box-shadow: inset -10px 0 8px -8px rgba(0,0,0,0.2); */
+}
+
 
 @media (max-width: 480px) {
   .subtitle {

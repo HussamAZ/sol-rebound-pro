@@ -184,6 +184,17 @@ html {
       width: 95%; /* عرض جيد للشاشات الصغيرة */
       padding: 1.5rem; /* تقليل الحشو */
     }
+.scene-wrapper { /* أو أي حاوية رئيسية للخلفية */
+    display: none; /* إخفاء الخلفية بالكامل */
+  }
+  /* أو بدلاً من ذلك، تبسيط عناصر معينة */
+  .cube, .line, .pulse {
+    animation: none !important; /* إيقاف التحريكات */
+    /* visibility: hidden; /* إخفاء العناصر */
+  }
+  .grid-container {
+    display: none;
+  }
   }
   
   @media (max-width: 480px) {

@@ -1,118 +1,114 @@
 // backend/services/rewardService.js
-const anchor = require('@coral-xyz/anchor');
-const { PublicKey, Transaction, TransactionInstruction, ComputeBudgetProgram } = require('@solana/web3.js');
-const { Buffer } = require('buffer');
-const { getWeeklyTopReferrers, getTopClosersByWeeklyCount } = require('./referralService');
-const { getTotalPlatformEarningsForPeriod } = require('../services/platformEarningService'); // *** استيراد هذا ***
-const { getAccountBalance } = require('./solanaService');
-const {
-    // getProgram, // لم نعد بحاجة إليه مباشرة
-    getConnection,
-    // getServerWallet, // لم نعد بحاجة إليه
-    getMainTreasuryWallet,    // *** سنستخدم هذا كمصدر ***
-    getAdminAuthorityKeypair,
-    getAdminAuthorityPublicKey,
-    getSystemProgramId,
-    getProgramId,
-} = require('../config/solana');
-const { LAMPORTS_PER_SOL } = require('../config/constants'); // TOP_REFERRER/CLOSER_REWARD_PERCENT لم تعد مستخدمة هنا
-const { sendWeeklyTopReport } = require('./notificationService');
 
-const BN_ZERO = new anchor.BN(0);
-const REWARD_PERCENTAGE = new anchor.BN(1); // 1%
+// --- 1. الاستيرادات الأساسية ---
+const anchor = require('@coral-xyz/anchor');
+const { PublicKey, Transaction, SystemProgram, ComputeBudgetProgram } = require('@solana/web3.js');
+const { getWeeklyTopReferrers, getTopClosersByWeeklyCount } = require('./referralService');
+const { getTotalPlatformEarningsForPeriod } = require('./platformEarningService');
+const { getAccountBalance } = require('./solanaService');
+const { sendWeeklyTopReport } = require('./notificationService');
+const { LAMPORTS_PER_SOL, TOP_REFERRER_REWARD_PERCENT, TOP_CLOSER_REWARD_PERCENT, RENT_EXEMPT_RESERVE_LAMPORTS } = require('../config/constants');
+
+// --- 2. الاستيرادات من ملف solana.js (مع إضافة getProgram) ---
+const {
+    getConnection,
+    getProgram, // <-- الاستيراد الإضافي والمهم
+    getMainTreasuryWallet,
+    getAdminAuthorityKeypair,
+} = require('../config/solana');
+
 
 /**
- * الدالة الأساسية لتوزيع الجوائز باستخدام تعليمة distribute_rewards.
- * @param {anchor.web3.Keypair} sourceWalletKeypair - زوج مفاتيح المحفظة مصدر الأموال (ستكون Main Treasury).
- * @param {anchor.web3.Keypair} adminAuthorityKeypair - زوج مفاتيح سلطة الإدارة (الموقع المطلوب).
- * @param {PublicKey[]} recipientPubkeys - مصفوفة المفاتيح العامة للمستلمين.
- * @param {anchor.BN[]} amountsBN - مصفوفة المبالغ (ككائنات BN) المقابلة لكل مستلم.
- * @param {string} distributionLabel - تسمية للمعاملة (للتسجيل).
+ * (النسخة النهائية والمعدلة للعمل مع العقد الحالي)
+ * الدالة الأساسية لتوزيع الجوائز.
+ * @param {anchor.web3.Keypair} sourceWalletKeypair - Main Treasury.
+ * @param {anchor.web3.Keypair} adminAuthorityKeypair - Admin Authority.
+ * @param {PublicKey[]} recipientPubkeys - مصفوفة المستلمين.
+ * @param {anchor.BN[]} amountsBN - مصفوفة المبالغ.
+ * @param {string} distributionLabel - تسمية للمعاملة.
  * @returns {Promise<string>} - توقيع المعاملة الناجحة.
  */
 async function distributeRewardsViaContract(sourceWalletKeypair, adminAuthorityKeypair, recipientPubkeys, amountsBN, distributionLabel) {
-    // const program = getProgram(); // لم نعد بحاجة لـ program.methods
     const connection = getConnection();
-    const adminAuthorityPublicKey = getAdminAuthorityPublicKey();
-    const systemProgramId = getSystemProgramId();
-    const programId = getProgramId();
+    const program = getProgram();
 
-    if (!connection || !sourceWalletKeypair || !adminAuthorityKeypair || !adminAuthorityPublicKey || !systemProgramId || !programId) {
-        throw new Error(`Solana config/keypairs/IDs not initialized for distributeRewardsViaContract (${distributionLabel}).`);
+    if (!connection || !program || !sourceWalletKeypair || !adminAuthorityKeypair) {
+        throw new Error(`Solana config/keypairs not initialized for distributeRewardsViaContract (${distributionLabel}).`);
     }
     if (recipientPubkeys.length === 0 || amountsBN.length === 0 || recipientPubkeys.length !== amountsBN.length) {
         throw new Error(`Invalid recipients or amounts for ${distributionLabel}. R:${recipientPubkeys.length}, A:${amountsBN.length}`);
     }
 
-    console.log(`RewardService (distributeRewardsViaContract/Manual - ${distributionLabel}): Preparing instruction...`);
-    const totalAmountBN = amountsBN.reduce((acc, val) => acc.add(val), BN_ZERO);
-    console.log(`   - Treasury/Source Wallet: ${sourceWalletKeypair.publicKey.toBase58()}`);
-    console.log(`   - Authority (Signer): ${adminAuthorityKeypair.publicKey.toBase58()}`);
-    console.log(`   - Recipients Count: ${recipientPubkeys.length}`);
-    console.log(`   - Total Amount to Distribute (BN): ${totalAmountBN.toString()}`);
+    const totalAmountBN = amountsBN.reduce((acc, val) => acc.add(val), new anchor.BN(0));
+    console.log(`RewardService (distributeRewardsViaContract - ${distributionLabel}): Preparing transaction...`);
+    console.log(`   - Treasury Wallet (Signer 1): ${sourceWalletKeypair.publicKey.toBase58()}`);
+    console.log(`   - Authority (Signer 2): ${adminAuthorityKeypair.publicKey.toBase58()}`);
+    console.log(`   - Total Amount: ${totalAmountBN.toString()}`);
 
-    if (!adminAuthorityKeypair.publicKey.equals(adminAuthorityPublicKey)) { throw new Error(`Admin Authority Keypair mismatch.`); }
-
-    const sourceWalletBalanceCheck = await getAccountBalance(sourceWalletKeypair.publicKey);
-    const sourceWalletBalanceCheckBN = new anchor.BN(sourceWalletBalanceCheck.toString());
-    if (sourceWalletBalanceCheckBN.lt(totalAmountBN)) {
-         throw new Error(`Insufficient balance in Source Wallet (${sourceWalletKeypair.publicKey.toBase58()}) for ${distributionLabel}. Needed: ${totalAmountBN}, Available: ${sourceWalletBalanceCheckBN}`);
+    const sourceWalletBalance = await getAccountBalance(sourceWalletKeypair.publicKey);
+    const requiredBalanceBN = totalAmountBN.add(new anchor.BN(RENT_EXEMPT_RESERVE_LAMPORTS));
+    if (new anchor.BN(sourceWalletBalance.toString()).lt(requiredBalanceBN)) {
+        throw new Error(`Insufficient balance in Treasury Wallet. Needed for rewards + rent reserve: ${requiredBalanceBN.toString()}, Available: ${sourceWalletBalance}`);
     }
-    console.log(`RewardService (distributeRewardsViaContract/Manual - ${distributionLabel}): Source Wallet balance check passed.`);
 
-    let signature = '';
+    console.log(`RewardService (distributeRewardsViaContract - ${distributionLabel}): Source Wallet balance check passed.`);
+
     try {
-        const instructionDiscriminator = Buffer.from([97, 6, 227, 255, 124, 165, 3, 148]);
-        const amountsBuffer = Buffer.alloc(4 + amountsBN.length * 8);
-        amountsBuffer.writeUInt32LE(amountsBN.length, 0);
-        amountsBN.forEach((amount, index) => { amount.toBuffer('le', 8).copy(amountsBuffer, 4 + index * 8); });
-        const instructionData = Buffer.concat([instructionDiscriminator, amountsBuffer]);
+        const tx = new Transaction();
+        tx.add(ComputeBudgetProgram.setComputeUnitLimit({ units: 200000 + (recipientPubkeys.length * 20000) }));
+        
+        tx.add(
+            await program.methods
+                .distributeRewards(amountsBN)
+                .accounts({
+                    treasury: sourceWalletKeypair.publicKey,
+                    authority: adminAuthorityKeypair.publicKey,
+                    systemProgram: SystemProgram.programId,
+                })
+                .remainingAccounts(
+                    recipientPubkeys.map(pubkey => ({ pubkey, isSigner: false, isWritable: true }))
+                )
+                .instruction()
+        );
+        
+        tx.feePayer = adminAuthorityKeypair.publicKey;
+        tx.recentBlockhash = (await connection.getLatestBlockhash()).blockhash;
+        
+        console.log(`RewardService (distributeRewardsViaContract - ${distributionLabel}): Sending and confirming transaction...`);
 
-        const instructionKeys = [
-            { pubkey: sourceWalletKeypair.publicKey, isSigner: true, isWritable: true }, // المصدر (الكنز الرئيسي)
-            { pubkey: adminAuthorityKeypair.publicKey, isSigner: true, isWritable: false }, // السلطة
-            { pubkey: systemProgramId, isSigner: false, isWritable: false },
-            ...recipientPubkeys.map(r => ({ pubkey: r, isSigner: false, isWritable: true }))
-        ];
-
-        const distributeInstruction = new TransactionInstruction({ keys: instructionKeys, programId: programId, data: instructionData });
-        const computeUnitLimitInstruction = ComputeBudgetProgram.setComputeUnitLimit({ units: 600000 });
-        const transaction = new Transaction().add(computeUnitLimitInstruction).add(distributeInstruction);
-        transaction.feePayer = adminAuthorityKeypair.publicKey; // السلطة تدفع رسوم المعاملة
-
-        console.log(`RewardService (distributeRewardsViaContract/Manual - ${distributionLabel}): Sending and confirming transaction...`);
-        signature = await anchor.web3.sendAndConfirmTransaction(
+        const signature = await anchor.web3.sendAndConfirmTransaction(
             connection,
-            transaction,
-            [adminAuthorityKeypair, sourceWalletKeypair], // الموقعون: السلطة ومصدر الأموال
+            tx,
+            [sourceWalletKeypair, adminAuthorityKeypair],
             { commitment: 'confirmed', skipPreflight: false }
         );
-        console.log(`RewardService (distributeRewardsViaContract/Manual - ${distributionLabel}): Distribution successful! Signature: ${signature}`);
+
+        console.log(`RewardService (distributeRewardsViaContract - ${distributionLabel}): Distribution successful! Signature: ${signature}`);
         return signature;
+
     } catch (error) {
-        console.error(`!!! RewardService (distributeRewardsViaContract/Manual - ${distributionLabel}) ERROR (Tx: ${signature || 'N/A'}) !!!`, error);
-        let specificError = error.message;
-        if (error.logs) { specificError = `Transaction failed with logs: ${JSON.stringify(error.logs)}`; }
-        throw new Error(`Failed distribution (${distributionLabel}): ${specificError}`);
+        console.error(`!!! RewardService (distributeRewardsViaContract - ${distributionLabel}) ERROR !!!`, error);
+        const logs = error.logs || [];
+        throw new Error(`Failed distribution (${distributionLabel}): ${error.message} | Logs: ${logs.join('\n')}`);
     }
 }
 
-/**
- * يحسب ويوزع مكافآت أفضل المحيلين الأسبوعية.
- */
+
+// --- باقي دوال الملف (distributeTopReferrerRewards و distributeTopCloserRewards) تبقى كما هي ---
+// --- لأن التغيير الذي قمنا به هو في الدالة المساعدة التي يستخدمونها ---
+
 async function distributeTopReferrerRewards() {
     const JOB_NAME = "[Top Referrers Cron - Treasury Distribution]";
     console.log(`[${new Date().toISOString()}] --- ${JOB_NAME} Starting Execution ---`);
     const distributionResults = [];
     try {
+        // --- (جزء التحقق من المفاتيح وحساب فترة الأرباح يبقى كما هو) ---
         const mainTreasuryKeypair = getMainTreasuryWallet();
         const adminAuthorityKeypair = getAdminAuthorityKeypair();
         if (!mainTreasuryKeypair || !adminAuthorityKeypair) {
             throw new Error("Keypairs not loaded for referrer rewards.");
         }
 
-        // 1. حساب إجمالي أرباح المنصة للأسبوع الماضي (نفس المنطق)
-        // ... (كود حساب totalWeeklyPlatformEarningsBN يبقى كما هو) ...
         const calculationEndDate = new Date();
         calculationEndDate.setUTCHours(23, 0, 0, 0);
         if (calculationEndDate.getUTCDay() !== 6) {
@@ -122,58 +118,92 @@ async function distributeTopReferrerRewards() {
         calculationStartDate.setUTCDate(calculationStartDate.getUTCDate() - 6);
         calculationStartDate.setUTCHours(0, 0, 0, 0);
 
-        console.log(`${JOB_NAME} Calculating platform earnings from DB for period: ${calculationStartDate.toISOString()} to ${calculationEndDate.toISOString()}`);
-        const totalWeeklyPlatformEarningsBigInt = await getTotalPlatformEarningsForPeriod(calculationStartDate, calculationEndDate);
-        const totalWeeklyPlatformEarningsBN = new anchor.BN(totalWeeklyPlatformEarningsBigInt.toString());
-        console.log(`${JOB_NAME} DEBUG: Total Weekly Platform Earnings (BN): ${totalWeeklyPlatformEarningsBN.toString()}`);
-
-
-        if (totalWeeklyPlatformEarningsBN.lte(BN_ZERO)) {
+        const totalWeeklyPlatformEarningsBN = new anchor.BN((await getTotalPlatformEarningsForPeriod(calculationStartDate, calculationEndDate)).toString());
+        if (totalWeeklyPlatformEarningsBN.isZero()) {
             console.log(`${JOB_NAME} EXIT: No platform earnings this week. No referrer rewards to distribute.`);
             return distributionResults;
         }
 
-        const referrerRewardPool = totalWeeklyPlatformEarningsBN.mul(REWARD_PERCENTAGE).div(new anchor.BN(100));
-        if (referrerRewardPool.lte(BN_ZERO)) {
+        const referrerRewardPool = totalWeeklyPlatformEarningsBN.mul(new anchor.BN(TOP_REFERRER_REWARD_PERCENT)).div(new anchor.BN(100));
+        if (referrerRewardPool.isZero()) {
             console.log(`${JOB_NAME} EXIT: Referrer reward pool is zero.`);
             return distributionResults;
         }
 
-        // *** استدعاء الدالة الجديدة لجلب أفضل المحيلين بناءً على النشاط الأسبوعي ***
-        const topReferrers = await getWeeklyTopReferrers(10); // جلب أفضل 10 بناءً على weeklyReferralsCount
-        const numberOfWinners = topReferrers.length;
-        if (numberOfWinners === 0) {
+        const topReferrers = await getWeeklyTopReferrers(10);
+        if (topReferrers.length === 0) {
             console.log(`${JOB_NAME} EXIT: No eligible top weekly referrers found.`);
             return distributionResults;
         }
 
-        const individualShare = referrerRewardPool.div(new anchor.BN(numberOfWinners));
-        if (individualShare.lte(BN_ZERO)) {
-            console.log(`${JOB_NAME} EXIT: Individual referrer share is zero.`);
+        // --- **بداية المنطق الجديد للفلترة** ---
+        console.log(`${JOB_NAME} INFO: Checking activation status for ${topReferrers.length} potential winners...`);
+        const eligibleWinners = [];
+        const ineligibleWinners = [];
+
+        for (const winner of topReferrers) {
+            try {
+                const balance = await getAccountBalance(new PublicKey(winner.user));
+                if (balance > BigInt(0)) {
+                    eligibleWinners.push(winner); // المحفظة نشطة
+                } else {
+                    ineligibleWinners.push(winner); // المحفظة غير نشطة (رصيدها صفر)
+                }
+            } catch (e) {
+                console.warn(`${JOB_NAME} WARN: Could not check balance for ${winner.user}. Assuming ineligible. Error: ${e.message}`);
+                ineligibleWinners.push(winner);
+            }
+        }
+
+        console.log(`${JOB_NAME} INFO: Found ${eligibleWinners.length} eligible (active) winners and ${ineligibleWinners.length} ineligible (inactive) winners.`);
+
+        if (ineligibleWinners.length > 0) {
+            const ineligibleKeys = ineligibleWinners.map(w => w.user).join(', ');
+            const adminMessage = `⚠️ ${JOB_NAME}: Skipped ${ineligibleWinners.length} inactive winners: ${ineligibleKeys}. They need to activate their wallets.`;
+            // يمكنك تفعيل إرسال هذه الرسالة إلى قناة خاصة بالمسؤولين لاحقًا
+            // await sendTelegramMessage(process.env.TELEGRAM_ADMIN_CHAT_ID, adminMessage);
+            console.log(adminMessage);
+        }
+        // --- **نهاية المنطق الجديد للفلترة** ---
+
+        if (eligibleWinners.length === 0) {
+            console.log(`${JOB_NAME} EXIT: No eligible (active) winners found after checking balances.`);
             return distributionResults;
         }
 
-        const recipientPubkeys = topReferrers.map(winner => new PublicKey(winner.user));
-        const amountsBN = topReferrers.map(() => individualShare);
+        // **إعادة حساب الحصة بناءً على عدد الفائزين المؤهلين فقط**
+        const individualShare = referrerRewardPool.div(new anchor.BN(eligibleWinners.length));
+        if (individualShare.isZero()) {
+            console.log(`${JOB_NAME} EXIT: Individual referrer share is zero after filtering.`);
+            return distributionResults;
+        }
 
+        const recipientPubkeys = eligibleWinners.map(winner => new PublicKey(winner.user));
+        const amountsBN = eligibleWinners.map(() => individualShare);
+
+        console.log(`${JOB_NAME} INFO: Proceeding to distribute ${referrerRewardPool.toString()} lamports among ${eligibleWinners.length} active winners.`);
         const txSignature = await distributeRewardsViaContract(
             mainTreasuryKeypair, adminAuthorityKeypair, recipientPubkeys, amountsBN, "Top Weekly Referrers"
         );
         console.log(`${JOB_NAME} INFO: Top Weekly Referrers distribution successful. Tx: ${txSignature}`);
 
-        topReferrers.forEach(winner => {
+        eligibleWinners.forEach(winner => {
             distributionResults.push({
                 recipient: winner.user,
                 amount: individualShare.toNumber(),
                 signature: txSignature,
                 status: 'Success',
                 reason: 'Top Weekly Referrer',
-                // *** استخدام winner.weeklyReferralsCount هنا ***
-                weeklyScore: winner.weeklyReferralsCount // هذا هو عدد الإحالات الأسبوعية
+                weeklyScore: winner.weeklyReferralsCount // استخدم الحقل الصحيح للمحيلين
             });
         });
-        // *** تحديث وحدة النتيجة في استدعاء sendWeeklyTopReport ***
-        await sendWeeklyTopReport( "🏆 Weekly Top Referrers!", distributionResults, 'weeklyScore', 'New Referrals this Week' );
+
+        // تعديل رسالة تيليجرام لتكون أكثر وضوحًا
+        let reportTitle = "🏆 Weekly Top Referrers!";
+        if (ineligibleWinners.length > 0) {
+            reportTitle += ` (${ineligibleWinners.length} skipped due to inactive wallets)`;
+        }
+        await sendWeeklyTopReport(reportTitle, distributionResults, 'weeklyScore', 'New Referrals this Week');
 
     } catch (error) {
         console.error(`[${new Date().toISOString()}] !!! ${JOB_NAME} UNCAUGHT ERROR During Execution !!!`, error);
@@ -183,93 +213,121 @@ async function distributeTopReferrerRewards() {
     return distributionResults;
 }
 
-/**
- * يحسب ويوزع مكافآت أفضل المغلقين الأسبوعية.
- */
+
 async function distributeTopCloserRewards() {
     const JOB_NAME = "[Top Closers Cron - Treasury Distribution]";
     console.log(`[${new Date().toISOString()}] --- ${JOB_NAME} Starting Execution ---`);
     const distributionResults = [];
     try {
-        const mainTreasuryKeypair = getMainTreasuryWallet(); // *** مصدر الأموال الآن هو الكنز الرئيسي ***
+        // --- (جزء التحقق من المفاتيح وحساب فترة الأرباح يبقى كما هو) ---
+        const mainTreasuryKeypair = getMainTreasuryWallet();
         const adminAuthorityKeypair = getAdminAuthorityKeypair();
         if (!mainTreasuryKeypair || !adminAuthorityKeypair) { throw new Error("Keypairs not loaded for closer rewards."); }
 
-        // 1. حساب إجمالي أرباح المنصة للأسبوع الماضي (نفس الفترة المستخدمة للمحيلين)
         const calculationEndDate = new Date();
-        calculationEndDate.setUTCHours(23, 0, 0, 0); // نهاية السبت
+        calculationEndDate.setUTCHours(23, 0, 0, 0);
         if (calculationEndDate.getUTCDay() !== 6) {
             calculationEndDate.setUTCDate(calculationEndDate.getUTCDate() - (calculationEndDate.getUTCDay() + 1) % 7);
         }
         const calculationStartDate = new Date(calculationEndDate);
         calculationStartDate.setUTCDate(calculationStartDate.getUTCDate() - 6);
-        calculationStartDate.setUTCHours(0, 0, 0, 0); // بداية الأحد
+        calculationStartDate.setUTCHours(0, 0, 0, 0);
 
-        // لا داعي لاستدعاء getTotalPlatformEarningsForPeriod مرة أخرى إذا كانت الفترة هي نفسها
-        // ولكن لضمان الدقة إذا تم تشغيل المهام بشكل منفصل، سنستدعيها.
-        // في سيناريو التشغيل الفعلي، قد ترغب في تمرير totalWeeklyPlatformEarningsBN بين المهام
-        // أو التأكد من أن الفترة الزمنية متطابقة تمامًا.
-        console.log(`${JOB_NAME} Calculating platform earnings from DB for period: ${calculationStartDate.toISOString()} to ${calculationEndDate.toISOString()}`);
-        const totalWeeklyPlatformEarningsBigInt = await getTotalPlatformEarningsForPeriod(calculationStartDate, calculationEndDate);
-        const totalWeeklyPlatformEarningsBN = new anchor.BN(totalWeeklyPlatformEarningsBigInt.toString());
-        console.log(`${JOB_NAME} DEBUG: Total Weekly Platform Earnings (BN): ${totalWeeklyPlatformEarningsBN.toString()}`);
-
-        if (totalWeeklyPlatformEarningsBN.lte(BN_ZERO)) {
+        const totalWeeklyPlatformEarningsBN = new anchor.BN((await getTotalPlatformEarningsForPeriod(calculationStartDate, calculationEndDate)).toString());
+        if (totalWeeklyPlatformEarningsBN.isZero()) {
             console.log(`${JOB_NAME} EXIT: No platform earnings this week. No closer rewards to distribute.`);
             return distributionResults;
         }
 
-        // 2. حساب مجمع مكافآت المغلقين (1% من أرباح الأسبوع)
-        const closerRewardPool = totalWeeklyPlatformEarningsBN.mul(REWARD_PERCENTAGE).div(new anchor.BN(100));
-        console.log(`${JOB_NAME} DEBUG: Closer reward pool (1% of weekly earnings): ${closerRewardPool.toString()}`);
-        if (closerRewardPool.lte(BN_ZERO)) { // <-- Corrected
+        const closerRewardPool = totalWeeklyPlatformEarningsBN.mul(new anchor.BN(TOP_CLOSER_REWARD_PERCENT)).div(new anchor.BN(100));
+        if (closerRewardPool.isZero()) {
             console.log(`${JOB_NAME} EXIT: Closer reward pool is zero.`);
-            return distributionResults; // <-- Return empty array
+            return distributionResults;
         }
 
         const topClosers = await getTopClosersByWeeklyCount(10);
-        const numberOfWinners = topClosers.length;
-        console.log(`${JOB_NAME} DEBUG: Number of potential closer winners: ${numberOfWinners}`);
-        if (numberOfWinners === 0) {
-            console.log(`${JOB_NAME} EXIT: No eligible top closers found.`); // <-- سجل الخروج
-            return distributionResults; // <-- Return empty array
+        if (topClosers.length === 0) {
+            console.log(`${JOB_NAME} EXIT: No eligible top closers found.`);
+            return distributionResults;
         }
 
-        const individualShare = closerRewardPool.div(new anchor.BN(numberOfWinners));
-        console.log(`${JOB_NAME} DEBUG: Individual closer share (BN): ${individualShare.toString()}`);
-        if (individualShare.lte(BN_ZERO)) { // <-- Corrected
-            console.log(`${JOB_NAME} EXIT: Individual closer share is zero.`);
-            return distributionResults; // <-- Return empty array
-         }
+        // --- **بداية المنطق الجديد للفلترة** ---
+        console.log(`${JOB_NAME} INFO: Checking activation status for ${topClosers.length} potential winners...`);
+        const eligibleWinners = [];
+        const ineligibleWinners = [];
 
-         const recipientPubkeys = topClosers.map(winner => new PublicKey(winner.user));
-         const amountsBN = topClosers.map(() => individualShare);
- 
-         console.log(`${JOB_NAME} INFO: Proceeding to call distributeRewardsViaContract for Top Closers...`);
-         // *** تمرير mainTreasuryKeypair كمصدر للأموال ***
-         const txSignature = await distributeRewardsViaContract(
-             mainTreasuryKeypair, adminAuthorityKeypair, recipientPubkeys, amountsBN, "Top Closers"
-         );
-         console.log(`${JOB_NAME} INFO: Top Closers distribution successful. Tx: ${txSignature}`);
+        for (const winner of topClosers) {
+            try {
+                const balance = await getAccountBalance(new PublicKey(winner.user));
+                if (balance > BigInt(0)) {
+                    eligibleWinners.push(winner); // المحفظة نشطة
+                } else {
+                    ineligibleWinners.push(winner); // المحفظة غير نشطة (رصيدها صفر)
+                }
+            } catch (e) {
+                console.warn(`${JOB_NAME} WARN: Could not check balance for ${winner.user}. Assuming ineligible. Error: ${e.message}`);
+                ineligibleWinners.push(winner);
+            }
+        }
 
-        topClosers.forEach(winner => {
-            distributionResults.push({ /* ... populate results ... */
-                 recipient: winner.user, amount: individualShare.toNumber(), signature: txSignature,
-                 status: 'Success', reason: 'Top Closer', weeklyScore: winner.weeklyClosedAccounts
+        console.log(`${JOB_NAME} INFO: Found ${eligibleWinners.length} eligible (active) winners and ${ineligibleWinners.length} ineligible (inactive) winners.`);
+
+        if (ineligibleWinners.length > 0) {
+            const ineligibleKeys = ineligibleWinners.map(w => w.user).join(', ');
+            const adminMessage = `⚠️ ${JOB_NAME}: Skipped ${ineligibleWinners.length} inactive winners: ${ineligibleKeys}. They need to activate their wallets.`;
+            // يمكنك تفعيل إرسال هذه الرسالة إلى قناة خاصة بالمسؤولين لاحقًا
+            // await sendTelegramMessage(process.env.TELEGRAM_ADMIN_CHAT_ID, adminMessage);
+            console.log(adminMessage);
+        }
+        // --- **نهاية المنطق الجديد للفلترة** ---
+
+        if (eligibleWinners.length === 0) {
+            console.log(`${JOB_NAME} EXIT: No eligible (active) winners found after checking balances.`);
+            return distributionResults;
+        }
+
+        // **إعادة حساب الحصة بناءً على عدد الفائزين المؤهلين فقط**
+        const individualShare = closerRewardPool.div(new anchor.BN(eligibleWinners.length));
+        if (individualShare.isZero()) {
+            console.log(`${JOB_NAME} EXIT: Individual closer share is zero after filtering.`);
+            return distributionResults;
+        }
+
+        const recipientPubkeys = eligibleWinners.map(winner => new PublicKey(winner.user));
+        const amountsBN = eligibleWinners.map(() => individualShare);
+
+        console.log(`${JOB_NAME} INFO: Proceeding to distribute ${closerRewardPool.toString()} lamports among ${eligibleWinners.length} active winners.`);
+        const txSignature = await distributeRewardsViaContract(
+            mainTreasuryKeypair, adminAuthorityKeypair, recipientPubkeys, amountsBN, "Top Closers"
+        );
+        console.log(`${JOB_NAME} INFO: Top Closers distribution successful. Tx: ${txSignature}`);
+
+        eligibleWinners.forEach(winner => {
+            distributionResults.push({
+                recipient: winner.user, amount: individualShare.toNumber(), signature: txSignature,
+                status: 'Success', reason: 'Top Closer', weeklyScore: winner.weeklyClosedAccounts
             });
         });
-        await sendWeeklyTopReport("✨ Weekly Top Closers!", distributionResults, 'weeklyScore', 'Accounts Closed');
+        
+        // تعديل رسالة تيليجرام لتكون أكثر وضوحًا
+        let reportTitle = "✨ Weekly Top Closers!";
+        if (ineligibleWinners.length > 0) {
+            reportTitle += ` (${ineligibleWinners.length} skipped due to inactive wallets)`;
+        }
+        await sendWeeklyTopReport(reportTitle, distributionResults, 'weeklyScore', 'Accounts Closed');
 
     } catch (error) {
         console.error(`[${new Date().toISOString()}] !!! ${JOB_NAME} UNCAUGHT ERROR During Execution !!!`, error);
-        // في حالة الخطأ، distributionResults ستكون فارغة أو تحتوي على نتائج جزئية
     } finally {
         console.log(`[${new Date().toISOString()}] --- ${JOB_NAME} Finished Execution ---`);
     }
-    return distributionResults; // أرجع النتائج دائمًا
+    return distributionResults;
 }
+
 
 module.exports = {
     distributeTopReferrerRewards,
     distributeTopCloserRewards,
+    distributeRewardsViaContract
 };
+

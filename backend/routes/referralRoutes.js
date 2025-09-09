@@ -7,7 +7,8 @@ const router = express.Router();
 // GET /api/referrals/info?user=<publicKey>
 router.get('/info', referralController.getReferralInfo);
 
-// POST /api/referrals/withdraw
-router.post('/withdraw', referralController.withdrawReferrals);
+// **المسار الجديد للشركاء**
+// GET /api/referrals/partner-stats?ref_code=<CODE>
+router.get('/partner-stats', referralController.getPartnerStats); // <-- **السطر الجديد**
 
 module.exports = router;

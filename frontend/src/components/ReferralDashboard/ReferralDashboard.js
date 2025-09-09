@@ -7,6 +7,9 @@ import { toast } from 'react-toastify';
 
 import apiClient from '../../api/axiosInstance'; // <-- المسار الصحيح
 
+import { ReactComponent as TelegramIcon } from '../../assets/icons/telegram.svg';
+import { ReactComponent as TwitterIcon } from '../../assets/icons/twitter.svg';
+
 // تعريف الثوابت المتعلقة بالإحالة هنا
 const MIN_REFERRAL_WITHDRAW_SOL = 0.05;
 
@@ -25,14 +28,17 @@ const ReferralDashboard = ({ setError, referralInfo, loadingInfo, onSuccessfulWi
     const [isWithdrawing, setIsWithdrawing] = useState(false); // حالة السحب
     const [copyStatus, setCopyStatus] = useState('Copy'); // حالة زر النسخ
 
-    // إنشاء رابط الإحالة الديناميكي (يعتمد على publicKey)
     const referralLink = useMemo(() => {
         if (!publicKey) return '';
+        
+        // **المنطق الجديد**
+        const refParam = referralInfo?.referralCode || publicKey.toBase58();
+        
         if (typeof window !== 'undefined') {
-            return `${window.location.origin}/?ref=${publicKey.toBase58()}`;
+            return `${window.location.origin}/?ref=${refParam}`;
         }
         return '';
-    }, [publicKey]);
+    }, [publicKey, referralInfo]); // أضف referralInfo كاعتمادية
 
     // وظيفة النسخ (تبقى كما هي)
     const handleCopyLink = useCallback(() => {
@@ -52,55 +58,10 @@ const ReferralDashboard = ({ setError, referralInfo, loadingInfo, onSuccessfulWi
             });
     }, [referralLink, setError]); // إضافة setError للاعتماديات
 
-    // دالة معالجة سحب الأرباح (تعتمد الآن على referralInfo الممرر)
-    const handleWithdraw = useCallback(async () => {
-        // التحقق من الشروط باستخدام referralInfo الممرر
-        if (!publicKey || !connected || !referralInfo || (referralInfo.totalEarningsSol ?? 0) < MIN_REFERRAL_WITHDRAW_SOL) {
-            setError("Cannot withdraw: Connect wallet and ensure minimum balance is met.");
-            return;
-        }
-        if (isWithdrawing) return; // منع السحب المتعدد
+    
 
-        setIsWithdrawing(true);
-        //setError(''); // مسح الأخطاء قبل البدء
-
-        try {
-            console.log("ReferralDashboard: Sending withdrawal request...");
-            const response = await apiClient.post('/referrals/withdraw', {
-                userPublicKeyString: publicKey.toBase58()
-            });
-
-            if (response.data?.success) {
-                //alert(`Successfully withdrew ${response.data.amountSol?.toFixed(8)} SOL! Data will refresh.`); // إشعار بسيط
-                // استدعاء دالة التحديث الشامل من App.js إذا تم تمريرها
-                toast.success(`Successfully withdrew ${response.data.amountSol?.toFixed(8)} SOL!`); // <-- Toast نجاح
-                if (onSuccessfulWithdraw && typeof onSuccessfulWithdraw === 'function') {
-                    console.log("ReferralDashboard: Calling onSuccessfulWithdraw callback.");
-                    onSuccessfulWithdraw();
-                } else {
-                    // كحل بديل إذا لم يتم تمرير الدالة، يمكن إعادة تحميل الصفحة
-                    console.warn("ReferralDashboard: onSuccessfulWithdraw callback not provided. Reloading page as fallback.");
-                    window.location.reload();
-                }
-            } else {
-                // رمي خطأ إذا فشل الـ backend
-                throw new Error(response.data?.error || "Withdrawal failed on backend.");
-            }
-        } catch (error) {
-            console.error("ReferralDashboard Error during withdrawal:", error);
-            let displayError = 'An error occurred during withdrawal.';
-            if (axios.isAxiosError(error)) {
-                displayError = `Withdrawal Failed (${error.response?.status || 'N/A'}): ${error.response?.data?.error || error.message}`;
-            } else {
-                 displayError = error.message;
-            }
-            //setError(displayError); // عرض الخطأ باستخدام setError الممرر
-            toast.error(`Withdrawal Failed: ${displayError}`); // <-- Toast خطأ
-        } finally {
-            setIsWithdrawing(false); // إنهاء حالة المعالجة دائمًا
-        }
-    // الاعتماديات: publicKey, connected, referralInfo, isWithdrawing, setError, onSuccessfulWithdraw
-    }, [publicKey, connected, referralInfo, isWithdrawing, setError, onSuccessfulWithdraw]);
+    const TELEGRAM_CHANNEL_URL = "https://t.me/SolRebound"; // استبدل بالرابط الفعلي
+    const TWITTER_PROFILE_URL = "https://x.com/SOLREBOUND";   // استبدل بالرابط الفعلي
 
 
     // === العرض ===
@@ -135,6 +96,9 @@ const ReferralDashboard = ({ setError, referralInfo, loadingInfo, onSuccessfulWi
     return (
         <div className={`${styles.referralContainer} glass-effect container`}>
             <h2 className={`${styles.title} gradient-text-bold`}>Referral Dashboard</h2>
+            <p className={styles.referralSubtitle}>
+                💰 Refer Friends & Earn 25% of Our Platform Fee – Paid Straight to You, LIFETIME! Start Sharing Now! 🚀🔗
+            </p>
 
             {/* --- رابط الإحالة --- */}
             <div className={styles.linkContainer}>
@@ -181,21 +145,33 @@ const ReferralDashboard = ({ setError, referralInfo, loadingInfo, onSuccessfulWi
                  </div>
             </div>
            
-            {/* --- قسم السحب --- */}
-            <div className={styles.withdrawSection}>
-                <p className={styles.earningsText}>
-                    <strong className="gradient-text-bold">Accumulated Earnings (Lifetime): </strong>
-                    <span className={styles.earningsValue}>
-                        {(referralInfo.totalEarningsSol ?? 0).toFixed(8)} SOL
-                    </span>
-                    <span className={styles.lamportsValue}>
-                        ({(referralInfo.totalEarningsLamports ?? 0).toLocaleString()} Lamports)
-                    </span>
-                </p>
-                
-            </div>
+            
+            {/* --- الجملة التحفيزية الجديدة (مقسمة على أسطر) --- */}
+            <div className={styles.leaderboardPrompt}>
+                    <p className={styles.promptLine1}>
+                        🏆 Keep an eye on the Weekly Leaderboards below! 👇
+                    </p>
+                    {/* السطر الثاني: النص قبل الروابط */}
+                    <p className={styles.promptLine2TextOnly}>
+                        Winners announced here & on
+                    </p>
+                    {/* حاوية جديدة للروابط والأيقونات فقط */}
+                    <div className={styles.promptSocialLinksContainer}>
+                        <a href={TELEGRAM_CHANNEL_URL} target="_blank" rel="noopener noreferrer" className={styles.socialIconLink} aria-label="Telegram">
+                            <TelegramIcon className={styles.promptSocialIcon} />
+                        </a>
+                        <a href={TWITTER_PROFILE_URL} target="_blank" rel="noopener noreferrer" className={styles.socialIconLink} aria-label="X (Twitter)">
+                            <TwitterIcon className={styles.promptSocialIcon} />
+                        </a>
+                    </div>
+                    {/* السطر الثالث */}
+                    <p className={styles.promptLine3}>
+                        Aim for the top! 💸🎉
+                    </p>
+                </div>
         </div>
     );
 };
 
 export default ReferralDashboard;
+

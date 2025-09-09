@@ -2,136 +2,149 @@ sol-rebound-pro/                  <-- المجلد الجذري للمشروع (
 ├── backend/                      <-- مجلد الخادم الخلفي (Backend)
 │   ├── __tests__/                <-- مجلد اختبارات Jest للـ Backend
 │   │   ├── platformEarningService.test.js
-│   │   ├── referralService.test.js
-│   │   └── solanaService.test.js
+│   │   ├── referralService.test.js  # (تم تعديله لإزالة اختبارات السحب)
+│   │   └── solanaService.test.js      # (تم تعديله لإزالة اختبارات sendSolFromHotWallet)
+│   │   └── transactionFlow.integration.test.js # (تم تعديله لإزالة اختبارات السحب)
 │   ├── config/                   <-- ملفات الإعداد والتهيئة
 │   │   ├── constants.js          # الثوابت (مفاتيح، نسب، إلخ)
 │   │   ├── db.js                 # إعداد اتصال MongoDB
 │   │   ├── prometheus.js         # إعداد عميل Prometheus
-│   │   ├── solana.js             # إعداد اتصال Solana و Anchor و Vault AppRole Auth
-│   │   └── vault.js              # تهيئة عميل Vault الأساسي (قبل AppRole Auth)
+│   │   ├── solana.js             # إعداد اتصال Solana و Anchor و Vault AppRole Auth (لا يحمل server-hot-wallet)
+│   │   └── vault.js              # (قد يكون دوره ثانويًا أو محذوفًا إذا كانت solana.js هي نقطة التفاعل الوحيدة)
 │   ├── controllers/              <-- معالجات الطلبات (API Logic)
+│   │   ├── debugController.js    # لتشغيل Cron Jobs يدويًا
 │   │   ├── leaderboardController.js
 │   │   ├── metricsController.js
-│   │   ├── referralController.js
-│   │   ├── statsController.js    # للتعامل مع /api/stats
+│   │   ├── referralController.js # (تم تعديله لإزالة معالج withdrawReferrals)
+│   │   ├── statsController.js
 │   │   ├── swaggerController.js
-│   │   └── transactionController.js
+│   │   ├── transactionController.js
+│   │   └── userController.js     # لمعالجة /api/users/initialize
 │   ├── jobs/                     <-- المهام المجدولة (Cron)
 │   │   ├── index.js              # نقطة الدخول لجدولة المهام
 │   │   ├── maintenanceJobs.js    # تصفير العدادات
-│   │   ├── rewardJobs.js         # توزيع المكافآت
-│   │   └── treasuryJob.js        # تقرير إدارة الخزينة
+│   │   ├── rewardJobs.js         # توزيع المكافآت (لا يعتمد على محفظة ساخنة)
+│   │   └── treasuryJob.js        # كنس الخزينة (لا يعتمد على محفظة ساخنة)
 │   ├── middleware/               <-- Middleware مخصص أو عام
-│   │   ├── errorHandler.js       # معالج الأخطاء العام
-│   │   ├── prometheusMiddleware.js # لتتبع مقاييس الطلبات
-│   │   └── rateLimiter.js        # لتحديد معدل الطلبات
+│   │   ├── errorHandler.js
+│   │   ├── prometheusMiddleware.js
+│   │   └── rateLimiter.js
 │   ├── models/                   <-- نماذج Mongoose (Database Schema)
-│   │   ├── PlatformEarning.js    # لتتبع أرباح المنصة
-│   │   └── Referral.js           # لبيانات المستخدمين والإحالات
+│   │   ├── PlatformEarning.js
+│   │   └── Referral.js           # (يتضمن تشفير حقل المحيل)
 │   ├── node_modules/             <-- (يتم إنشاؤه بواسطة npm install)
 │   ├── routes/                   <-- تعريف المسارات (API Endpoints)
+│   │   ├── debugRoutes.js
 │   │   ├── index.js              # نقطة الدخول الرئيسية للمسارات /api
 │   │   ├── leaderboardRoutes.js
-│   │   ├── metricsRoutes.js      # مسار Prometheus (يُركب مباشرة في server.js)
-│   │   ├── referralRoutes.js
-│   │   ├── statsRoutes.js        # مسار الإحصائيات (/api/stats)
-│   │   ├── swaggerRoutes.js      # مسار توثيق API (يُركب مباشرة في server.js)
-│   │   └── transactionRoutes.js
+│   │   ├── metricsRoutes.js
+│   │   ├── referralRoutes.js     # (تم تعديله لإزالة مسار /withdraw)
+│   │   ├── statsRoutes.js
+│   │   ├── swaggerRoutes.js
+│   │   ├── transactionRoutes.js
+│   │   └── userRoutes.js         # لمسار /api/users/initialize
 │   ├── services/                 <-- منطق الأعمال الأساسي
-│   │   ├── notificationService.js # لإرسال إشعارات Telegram
-│   │   ├── platformEarningService.js # التعامل مع أرباح المنصة
-│   │   ├── referralService.js    # منطق الإحالات والمستخدمين
-│   │   ├── rewardService.js      # منطق حساب وتوزيع المكافآت
-│   │   ├── solanaService.js      # التفاعل مع Solana (تحضير/تحقق/إرسال)
-│   │   ├── statsService.js       # لحساب الإحصائيات العامة
-│   │   └── vaultService.js       # (بسيط حاليًا، قد يتطور)
-│   ├── .env                      <-- (ملف إعدادات محلي للـ Backend، في .gitignore)
-│   ├── ata_claim.json            <-- ملف IDL للعقد الذكي
-│   ├── Dockerfile                <-- لإنشاء صورة Docker للـ backend
+│   │   ├── notificationService.js # لإرسال إشعارات Telegram (مع مكان لرابط الشعار)
+│   │   ├── platformEarningService.js
+│   │   ├── referralService.js    # (تم تعديله لإزالة منطق السحب)
+│   │   ├── rewardService.js      # (يستخدم mainTreasury و adminAuthority لتوزيع الجوائز)
+│   │   ├── solanaService.js      # (تم تعديله لإزالة sendSolFromHotWallet، يستخدم Keypair وهمي للـ provider)
+│   │   ├── statsService.js
+│   │   └── vaultService.js       # (قد يكون دوره ثانويًا أو محذوفًا)
+│   ├── .env                      # (ملف إعدادات محلي للـ Backend)
+│   ├── ata_claim.json            # ملف IDL للعقد الذكي (نفس المعرف)
+│   ├── Dockerfile
 │   ├── package-lock.json
 │   ├── package.json
 │   ├── server.js                 # نقطة دخول خادم Express
-│   └── swagger.json              # ملف مواصفات OpenAPI المحدث
+│   └── swagger.json              # ملف مواصفات OpenAPI (محدث بدون نقطة السحب)
 ├── frontend/                     <-- مجلد الواجهة الأمامية (Frontend)
-│   ├── __mocks__/                <-- مجلد محاكاة Jest للواجهة
-│   │   └── react-toastify.js     # المحاكاة اليدوية لـ react-toastify
-│   ├── build/                    <-- (يتم إنشاؤه بواسطة npm run build)
-│   ├── node_modules/             <-- (يتم إنشاؤه بواسطة npm install)
-│   ├── public/                   <-- الملفات العامة الثابتة
-│   │   ├── icons/                # مجلد للأيقونات المستخدمة كملفات (PNG, WebP)
+│   ├── __mocks__/
+│   │   └── react-toastify.js
+│   ├── build/
+│   ├── node_modules/
+│   ├── public/
+│   │   ├── icons/
 │   │   │   ├── binance.png
+│   │   │   ├── github.svg  # <-- أيقونة GitHub
 │   │   │   └── bullx.webp
 │   │   ├── favicon.png
-│   │   ├── index.html            # ملف HTML الرئيسي
+│   │   ├── index.html            # (محدث بعلامات meta للشعار و اسم التطبيق)
 │   │   ├── logo192.png
 │   │   ├── logo512.png
-│   │   ├── manifest.json
+│   │   ├── manifest.json         # (أكدت أنك لا تملكه، لذا هذا السطر غير دقيق إذا كان كذلك)
 │   │   ├── robots.txt
-│   │   └── sol_reb.png           # الشعار الرئيسي
-│   ├── src/                      <-- الكود المصدري لتطبيق React
-│   │   ├── api/                  # إعداد Axios instance
+│   │   └── sol_reb.png
+│   ├── src/
+│   │   ├── api/
 │   │   │   └── axiosInstance.js
-│   │   ├── assets/               # الأصول المضمنة في البناء (مثل SVG)
+│   │   ├── assets/
 │   │   │   └── icons/
+│   │   │       ├── github.svg     # (إذا كان مكررًا، يمكنك توحيد مكانه)
 │   │   │       ├── photon.svg
 │   │   │       ├── telegram.svg
 │   │   │       └── twitter.svg
-│   │   ├── components/           # المكونات المقسمة
+│   │   ├── components/
 │   │   │   ├── AtaManager/
 │   │   │   │   ├── AtaManager.js
 │   │   │   │   ├── AtaManager.module.css
-│   │   │   │   └── AtaManager.test.js  # (ملف الاختبار الفاشل حاليًا)
+│   │   │   │   └── AtaManager.test.js  # (اختبارات ناجحة)
 │   │   │   ├── CountdownTimer/
 │   │   │   │   ├── CountdownTimer.js
 │   │   │   │   ├── CountdownTimer.module.css
-│   │   │   │   └── CountdownTimer.test.js # اختبارات هذا المكون
+│   │   │   │   └── CountdownTimer.test.js
 │   │   │   ├── Footer/
-│   │   │   │   ├── Footer.js
+│   │   │   │   ├── Footer.js         # (محدث بروابط لصفحات الخصوصية والشروط، ورابط شعار للصفحة الرئيسية)
 │   │   │   │   └── Footer.module.css
 │   │   │   ├── Header/
-│   │   │   │   ├── Header.js
+│   │   │   │   ├── Header.js         # (محدث برابط شعار للصفحة الرئيسية، وإرشادات موبايل)
 │   │   │   │   └── Header.module.css
 │   │   │   ├── Leaderboards/
 │   │   │   │   ├── Leaderboards.js
 │   │   │   │   ├── Leaderboards.module.css
 │   │   │   │   ├── TopClosersTable.js
-│   │   │   │   └── TopReferrersTable.js
+│   │   │   │   └── TopReferrersTable.js # (محدث ليعرض بناءً على النشاط الأسبوعي)
+│   │   │   ├── PrivacyPolicyPage/    # <-- مجلد جديد
+│   │   │   │   ├── PrivacyPolicyPage.js
+│   │   │   │   └── PrivacyPolicyPage.module.css # (قد يستخدم نفس أنماط Terms)
 │   │   │   ├── ProjectStats/
 │   │   │   │   ├── ProjectStats.js
 │   │   │   │   ├── ProjectStats.module.css
-│   │   │   │   └── ProjectStats.test.js  # اختبارات هذا المكون
-│   │   │   └── ReferralDashboard/
-│   │   │       ├── ReferralDashboard.js
-│   │   │       ├── ReferralDashboard.module.css
-│   │   │       └── ReferralDashboard.test.js # اختبارات هذا المكون
-│   │   ├── App.js                # المكون الرئيسي للتطبيق
-│   │   ├── index.css             # الأنماط العامة
-│   │   ├── index.js              # نقطة دخول React
-│   │   └── ...                   # ملفات CRA الأخرى
-│   ├── .dockerignore             # لتجاهل الملفات عند بناء صورة Docker
-│   ├── .env                      # (ملف إعدادات محلي للواجهة، مثل REACT_APP_...)
-│   ├── craco.config.js           # ملف تخصيص CRA (لـ polyfills)
-│   ├── Dockerfile                # لإنشاء صورة Docker للـ frontend (Nginx)
-│   ├── nginx.conf                # ملف تكوين Nginx
+│   │   │   │   └── ProjectStats.test.js
+│   │   │   ├── ReferralDashboard/
+│   │   │   │   ├── ReferralDashboard.js # (محدث لإزالة زر السحب، وإضافة جمل تحفيزية)
+│   │   │   │   ├── ReferralDashboard.module.css
+│   │   │   │   └── ReferralDashboard.test.js # (محدث لإزالة اختبارات السحب)
+│   │   │   └── TermsAndConditionsPage/ # <-- مجلد جديد
+│   │   │       ├── TermsAndConditionsPage.js
+│   │   │       └── TermsAndConditionsPage.module.css # (قد يستخدم نفس أنماط Privacy)
+│   │   ├── App.js                # (محدث بالمسارات الجديدة لـ Privacy و Terms)
+│   │   ├── index.css
+│   │   ├── index.js              # (محدث ليشمل BrowserRouter)
+│   │   └── setupTests.js         # (مع polyfill لـ Web Crypto)
+│   ├── .dockerignore
+│   ├── .env                      # (ملف إعدادات محلي للواجهة)
+│   ├── craco.config.js
+│   ├── Dockerfile
+│   ├── nginx.conf
 │   ├── package-lock.json
 │   └── package.json
-├── smart-contract/               <-- مجلد العقد الذكي (Smart Contract)
-│   └── ata-claim/                <-- اسم مشروع Anchor
-│       ├── programs/             # كود العقد الذكي (Rust)
+├── smart-contract/
+│   └── ata-claim/
+│       ├── programs/
 │       │   └── ata-claim/
-│       │       └── src/lib.rs
-│       ├── tests/                # اختبارات العقد الذكي (TypeScript/JavaScript)
-│       │   └── ata-claim.ts
+│       │       └── src/lib.rs    # (الكود النهائي للعقد)
+│       ├── tests/
+│       │   └── ata-claim.test.ts # (13 اختبارًا ناجحًا)
 │       ├── .anchor/
-│       ├── Anchor.toml           # ملف إعدادات Anchor
+│       ├── Anchor.toml           # (مهيأ لـ localnet و genesis accounts للاختبار)
 │       ├── Cargo.lock
-│       ├── Cargo.toml            # ملف تعريف حزمة Rust
-│       └── migrations/deploy.js  # سكربت النشر (إذا استخدم)
-├── .env                          <-- ملف الإعدادات الجذرية لـ Docker Compose (هام، Gitignored)
-├── .gitignore                    <-- لتجاهل الملفات في Git
-├── backend-policy.hcl            <-- ملف سياسة Vault (يستخدم في الإعداد)
-├── docker-compose.yml            <-- ملف تنسيق Docker Compose
-├── hot-wallet.json               <-- (مثال، يجب إنشاؤه وحمايته، Gitignored)
-├── prometheus.yml                <-- ملف إعدادات Prometheus
-└── README.md                     <-- ملف التوثيق الرئيسي للمشروع
+│       ├── Cargo.toml
+│       ├── target/               # (يحتوي على deploy/ata_claim.so بعد البناء)
+│       └── tsconfig.json         # (مهيأ لترجمة اختبارات العقد)
+├── .env                          # (ملف الإعدادات الجذرية لـ Docker Compose)
+├── .gitignore
+├── backend-policy.hcl            # (ملف سياسة Vault محدث ليشمل فقط main-treasury و admin-authority)
+├── docker-compose.yml
+├── prometheus.yml
+└── README.md                     # (ملف التوثيق الرئيسي المحدث والشامل)

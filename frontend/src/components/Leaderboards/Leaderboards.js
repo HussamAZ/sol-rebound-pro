@@ -3,25 +3,24 @@ import React from 'react';
 import TopReferrersTable from './TopReferrersTable';
 import TopClosersTable from './TopClosersTable';
 
-// Props: يستقبل البيانات وحالات التحميل/الخطأ من App.js
-const Leaderboards = ({ // استقبال الـ props
+const Leaderboards = ({ 
     topReferrers,
     loadingTopReferrers,
     topClosers,
     loadingTopClosers,
-    leaderboardError // تأكد من استقبال خطأ واحد مشترك أو منفصل
+    leaderboardError 
 }) => {
     return (
-        <> {/* استخدام Fragment لتجنب div إضافي */}
-            <TopReferrersTable
-                data={topReferrers} // تمرير البيانات الصحيحة
-                isLoading={loadingTopReferrers} // تمرير حالة التحميل الصحيحة
-                error={leaderboardError} // تمرير الخطأ
+        <> {/* استخدام Fragment */}
+            <TopClosersTable    // <-- جدول المغلقين الآن أولاً
+                data={topClosers}
+                isLoading={loadingTopClosers}
+                error={leaderboardError}
             />
-            <TopClosersTable
-                data={topClosers} // تمرير البيانات الصحيحة
-                isLoading={loadingTopClosers} // تمرير حالة التحميل الصحيحة
-                error={leaderboardError} // تمرير نفس الخطأ أو خطأ منفصل إذا أردت
+            <TopReferrersTable  // <-- جدول المحيلين الآن ثانيًا
+                data={topReferrers} 
+                isLoading={loadingTopReferrers} 
+                error={leaderboardError}
             />
         </>
     );

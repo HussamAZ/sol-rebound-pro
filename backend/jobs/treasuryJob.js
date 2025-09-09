@@ -2,7 +2,7 @@
 // const referralService = require('../services/referralService'); // لم نعد بحاجة إليه هنا لهذا الغرض
 const { getAccountBalance, transferSol } = require('../services/solanaService');
 const { getMainTreasuryWallet, getFinalStoragePublicKey } = require('../config/solana');
-const { FINAL_STORAGE_TRANSFER_PERCENT, LAMPORTS_PER_SOL } = require('../config/constants'); // TARGET_HOT_WALLET_BALANCE_SOL لم يعد مستخدمًا هنا
+const { FINAL_STORAGE_TRANSFER_PERCENT, LAMPORTS_PER_SOL, RENT_EXEMPT_RESERVE_LAMPORTS } = require('../config/constants'); // TARGET_HOT_WALLET_BALANCE_SOL لم يعد مستخدمًا هنا
 
 async function runTreasurySweepJob() { // إعادة تسمية الدالة لتعكس وظيفتها الجديدة
     const JOB_NAME = "[Treasury Sweep to Final Storage Cron]";
@@ -30,7 +30,16 @@ async function runTreasurySweepJob() { // إعادة تسمية الدالة ل�
         }
 
         // 2. حساب 99% من هذا الرصيد لتحويله
-        const amountToSweep = (currentTreasuryBalance * BigInt(FINAL_STORAGE_TRANSFER_PERCENT)) / BigInt(100);
+	// احسب المبلغ المتاح للتحويل (كل شيء فوق حد الإيجار)
+	const availableToSweep = currentTreasuryBalance - BigInt(RENT_EXEMPT_RESERVE_LAMPORTS);
+
+	if (availableToSweep <= BigInt(0)) {
+	    console.log(`${JOB_NAME} Treasury balance is below rent-exempt reserve. No sweep needed.`);
+	    return;
+	}
+
+	// الآن، احسب 99% من المبلغ المتاح فقط
+	const amountToSweep = (availableToSweep * BigInt(FINAL_STORAGE_TRANSFER_PERCENT)) / BigInt(100);
         console.log(`${JOB_NAME} Calculated amount to sweep (99%): ${amountToSweep.toString()} lamports.`);
 
         if (amountToSweep <= BigInt(0)) {

@@ -1,5 +1,5 @@
 // backend/services/solanaService.js
-const { PublicKey, Transaction, SystemProgram, TransactionInstruction, sendAndConfirmTransaction, Keypair } = require('@solana/web3.js');
+const { PublicKey, Transaction, SystemProgram, TransactionInstruction, sendAndConfirmTransaction, Keypair, ComputeBudgetProgram } = require('@solana/web3.js');
 const { Buffer } = require('buffer');
 const {
     getConnection,
@@ -36,7 +36,7 @@ const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
 async function prepareCloseMultipleATAsTransaction(
     userPublicKeyString,
     ataAddresses,
-    originalReferrerFromDB, // <-- تغيير اسم المعلمة
+    originalReferrerFromDB,
     rentPerAtaLamports,
     platformFeePercent
 ) {
@@ -46,97 +46,100 @@ async function prepareCloseMultipleATAsTransaction(
     const treasuryPublicKey = getTreasuryPublicKey();
     const tokenProgramId = getTokenProgramId();
     const systemProgramId = getSystemProgramId();
-    const program = getProgram(); // نحتاج Coder من هنا
+    const program = getProgram();
 
-    // التحقق من التهيئة والمعاملات
-    if (!connection || !programId || !treasuryPublicKey || !tokenProgramId || !systemProgramId || !program?.coder || rentPerAtaLamports === undefined || platformFeePercent === undefined) {
-        console.error("SolanaService Error: Missing required configuration or parameters.", {
-            connection: !!connection, programId: !!programId, treasuryPublicKey: !!treasuryPublicKey,
-            tokenProgramId: !!tokenProgramId, systemProgramId: !!systemProgramId, coder: !!program?.coder,
-            rentPerAtaLamports, platformFeePercent
-        });
-        throw new Error("Solana configuration or required constants not fully initialized/passed in solanaService.");
+    if (!connection || !programId || !treasuryPublicKey || !tokenProgramId || !systemProgramId || !program?.coder) {
+        throw new Error("Solana configuration not fully initialized.");
     }
 
-    // التحقق من صحة المفاتيح والعناوين
-    let userPublicKey;
-    try {
-        userPublicKey = new PublicKey(userPublicKeyString);
-    } catch (e) {
-        console.error(`SolanaService Error: Invalid userPublicKeyString format: ${userPublicKeyString}`, e);
-        throw new Error(`Invalid userPublicKeyString format: ${userPublicKeyString}`);
-    }
+    const userPublicKey = new PublicKey(userPublicKeyString);
+    const ataPubkeys = ataAddresses.map(addr => new PublicKey(addr));
+    if (ataPubkeys.length === 0) throw new Error("No ATA addresses provided.");
 
-    let ataPubkeys;
-    try {
-        ataPubkeys = ataAddresses.map(addr => new PublicKey(addr));
-        if (ataPubkeys.length === 0) {
-            console.error("SolanaService Error: No ATA addresses provided.");
-            throw new Error("No ATA addresses provided.");
+    // --- دالة مساعدة داخلية لبناء المعاملة ---
+    const buildTransaction = (includeReferrer) => {
+        let referrerPk = null;
+        if (includeReferrer && originalReferrerFromDB) {
+            try {
+                referrerPk = new PublicKey(originalReferrerFromDB);
+            } catch (e) {
+                console.warn(`Invalid referrer format (${originalReferrerFromDB}), building tx without it.`);
+                referrerPk = null;
+            }
         }
-    } catch (e) {
-        console.error(`SolanaService Error: Invalid ATA address format in ataAddresses.`, e);
-        throw new Error(`Invalid ATA address format in ataAddresses: ${e.message}`);
-    }
 
-        // *** استخدام المحيل الأصلي الممرر من DB ***
-    let referrerPublicKeyForInstruction = null;
-    if (originalReferrerFromDB) {
-        try {
-            // تحقق بسيط من التنسيق (احتياطي)
-            referrerPublicKeyForInstruction = new PublicKey(originalReferrerFromDB);
-             console.log(`SolanaService (prepareCloseTx): Using original referrer from DB for instruction: ${referrerPublicKeyForInstruction.toBase58()}`);
-        } catch (e) {
-            console.warn(`SolanaService (prepareCloseTx): Invalid format for originalReferrerFromDB (${originalReferrerFromDB}). Ignoring for instruction.`);
-        }
-    } else {
-         console.log(`SolanaService (prepareCloseTx): No original referrer from DB provided.`);
-    }
-    // -----------------------------------------
-
-
-    try {
-        // --- بناء التعليمة يدويًا ---
-        const instructionDiscriminator = Buffer.from([194, 122, 68, 116, 143, 165, 99, 94]);
-        // *** استخدام referrerPublicKeyForInstruction هنا ***
-        let encodedReferrerKey = referrerPublicKeyForInstruction ? Buffer.concat([Buffer.from([1]), referrerPublicKeyForInstruction.toBuffer()]) : Buffer.from([0]);
-        const instructionData = Buffer.concat([instructionDiscriminator, encodedReferrerKey]);
-
-        const instructionKeys = [ /* ... (user, treasury, token_program, system_program) ... */
-             { pubkey: userPublicKey, isSigner: true, isWritable: true },
-             { pubkey: treasuryPublicKey, isSigner: false, isWritable: true },
-             { pubkey: tokenProgramId, isSigner: false, isWritable: false },
-             { pubkey: systemProgramId, isSigner: false, isWritable: false },
-             ...ataPubkeys.map(pubkey => ({ pubkey, isSigner: false, isWritable: true })),
+        const keys = [
+            { pubkey: userPublicKey, isSigner: true, isWritable: true },
+            { pubkey: treasuryPublicKey, isSigner: false, isWritable: true },
+            { pubkey: tokenProgramId, isSigner: false, isWritable: false },
+            { pubkey: systemProgramId, isSigner: false, isWritable: false },
+            ...ataPubkeys.map(pubkey => ({ pubkey, isSigner: false, isWritable: true })),
         ];
-        // *** إضافة المحيل الأصلي من DB إلى remainingAccounts إذا كان موجودًا ***
-        if (referrerPublicKeyForInstruction) {
-            instructionKeys.push({ pubkey: referrerPublicKeyForInstruction, isSigner: false, isWritable: true });
+
+        if (referrerPk) {
+            keys.push({ pubkey: referrerPk, isSigner: false, isWritable: true });
         }
+        
+        const instructionData = program.coder.instruction.encode("close_multiple_atas", {
+            referrerKey: referrerPk,
+        });
 
-        const instruction = new TransactionInstruction({ keys: instructionKeys, programId: programId, data: instructionData });
-        // ... (بناء المعاملة، جلب blockhash، التحويل إلى base64، حساب الرسوم) ...
-        const transaction = new Transaction().add(instruction);
+        const instruction = new TransactionInstruction({
+            keys: keys,
+            programId: programId,
+            data: instructionData,
+        });
+
+        const transaction = new Transaction();
+        // إضافة تعليمات لزيادة الـ Compute Units لتجنب الأخطاء في المعاملات الكبيرة
+        const requiredCUs = 200000 + (ataAddresses.length * 25000);
+        transaction.add(ComputeBudgetProgram.setComputeUnitLimit({ units: requiredCUs }));
+        
+        transaction.add(instruction);
+
         transaction.feePayer = userPublicKey;
-        const latestBlockhashResult = await connection.getLatestBlockhash('confirmed');
-        if (!latestBlockhashResult?.blockhash) throw new Error("Failed to fetch latest blockhash.");
-        transaction.recentBlockhash = latestBlockhashResult.blockhash;
-        const serializedTransaction = transaction.serialize({ requireAllSignatures: false, verifySignatures: false });
-        const transactionBase64 = serializedTransaction.toString('base64');
-        const totalEstimatedRent = BigInt(ataPubkeys.length) * BigInt(rentPerAtaLamports);
-        const platformFeeLamportsBigInt = (totalEstimatedRent * BigInt(platformFeePercent)) / BigInt(100);
-        const platformFeeLamports = platformFeeLamportsBigInt.toString();
+        console.log(`Transaction built ${referrerPk ? 'WITH' : 'WITHOUT'} referrer.`);
+        return transaction;
+    };
+    // --- نهاية الدالة المساعدة ---
 
-        console.log("SolanaService (prepareCloseTx): Transaction built with original referrer from DB (if any).");
+    // الخطوة 1: بناء المعاملة الأصلية مع المحيل (إذا كان موجودًا)
+    let transaction = buildTransaction(true);
 
-        // إرجاع المعاملة المسلسلة ورسوم المنصة المقدرة
-        return { transactionBase64, platformFeeLamports };
+    // الخطوة 2: محاكاة المعاملة
+    if (originalReferrerFromDB) { // فقط قم بالمحاكاة إذا كان هناك محيل لمحاولة تحويل الأموال إليه
+        try {
+            console.log("Simulating transaction WITH referrer...");
+            const { blockhash } = await connection.getLatestBlockhash();
+            transaction.recentBlockhash = blockhash;
+            const simulationResult = await connection.simulateTransaction(transaction);
 
-    } catch (error) {
-        console.error("!!! SolanaService Error during instruction building or serialization:", error);
-        // رمي خطأ بمعلومات أوضح
-        throw new Error(`Failed to prepare transaction in service: ${error.message}`);
+            if (simulationResult.value.err) {
+                console.warn("Transaction simulation WITH referrer FAILED. Error:", simulationResult.value.err);
+                console.log("Re-building transaction WITHOUT referrer as a fallback.");
+                // إذا فشلت المحاكاة، قم ببناء المعاملة من جديد بدون المحيل
+                transaction = buildTransaction(false);
+            } else {
+                console.log("Transaction simulation WITH referrer SUCCEEDED.");
+            }
+        } catch (simError) {
+            console.error("CRITICAL error during simulation:", simError);
+            console.log("Re-building transaction WITHOUT referrer as a fallback due to critical simulation error.");
+            transaction = buildTransaction(false);
+        }
     }
+
+    // الخطوة 3: إعداد المعاملة النهائية وإرسالها
+    const latestBlockhashResult = await connection.getLatestBlockhash('confirmed');
+    transaction.recentBlockhash = latestBlockhashResult.blockhash;
+    
+    const serializedTransaction = transaction.serialize({ requireAllSignatures: false });
+    const transactionBase64 = serializedTransaction.toString('base64');
+    
+    const totalEstimatedRent = BigInt(ataPubkeys.length) * BigInt(rentPerAtaLamports);
+    const platformFeeLamports = (totalEstimatedRent * BigInt(platformFeePercent)) / BigInt(100);
+
+    return { transactionBase64, platformFeeLamports: platformFeeLamports.toString() };
 }
 
 /**

@@ -1,14 +1,25 @@
-use anchor_lang::prelude::*;
-use anchor_lang::solana_program::{self, system_instruction, program::invoke};
-use anchor_spl::token::{self, Token, TokenAccount, CloseAccount};
+use anchor_lang::prelude::*;        // يجلب declare_id!, pubkey!, Pubkey، AccountInfo، ProgramResult، إلخ.
+use anchor_spl::token::{            // يجلب CPI الخاصة بتوكن SPL
+    self,
+    Token,
+    TokenAccount,
+    CloseAccount,
+};
+use solana_program::{               // إذا تحتاج استدعاء invoke أو system_instruction مباشرة
+    program::invoke,
+    system_instruction,
+    account_info::AccountInfo,
+};
+use solana_program::pubkey;
+
 
 // --- تعريف الثوابت ---
 // استبدل هذا بالمعرف الفعلي الذي حصلت عليه بعد النشر الأخير (إذا تغير)
 // إذا لم يتغير، يمكنك تركه كما هو.
-declare_id!("8RzqAPhqTcGd48DxErKV3PNsvZA7ogxXGwbar6oPhPnW");
+declare_id!("E1Vi5qXaBXsbvKo9ERYPBbpcaaeWDAMY9DoTH7V4LyfR");
 
 // تأكد من أن هذا العنوان هو السلطة الصحيحة إذا كنت ستستخدمها لاحقًا لـ distribute_rewards
-const ADMIN_AUTHORITY: Pubkey = pubkey!("2UrhEmCmL7BUheGdECDePZFB24mPbipqYXk2wPqbXa6f");
+const ADMIN_AUTHORITY: Pubkey = pubkey!("Efvn5iPUGpbH1qnDT7MtTEWnYtpmvicLUWDkfoAcSa53");
 
 // قيمة الإيجار المتوقعة لحساب ATA فارغ (بالـ lamports)
 const RENT_PER_EMPTY_ATA: u64 = 2039280;
@@ -19,7 +30,7 @@ const REFERRAL_COMMISSION_PERCENT: u64 = 25; // 25% of the platform fee
 
 // --- بداية تعريف البرنامج ---
 #[program]
-pub mod ata_claim {
+pub mod ata_claim_contract {
     use super::*; // استيراد العناصر من النطاق الأعلى
 
     /// Closes multiple empty Associated Token Accounts (ATAs) for the user,

@@ -12,6 +12,17 @@
   /* استخدم gradient-text-bold في JSX */
 }
 
+.referralSubtitle {
+  font-size: 1.25rem; /* حجم خط كبير نسبيًا وواضح (يمكنك تعديله) */
+  font-weight: 900;   /* أو bold، لجعل الخط عريضًا */
+  color: #87fff7;     /* اللون الأبيض */
+  text-align: center; /* لتوسيط النص */
+  margin-top: 0.5rem; /* هامش علوي بسيط إذا كان العنوان قريبًا جدًا */
+  margin-bottom: 1.5rem; /* هامش سفلي ليفصله عن رابط الإحالة */
+  padding: 0 1rem;    /* حشو جانبي بسيط إذا كان النص طويلًا جدًا على الشاشات الصغيرة */
+  line-height: 1.5;   /* لتحسين قابلية القراءة إذا كان النص على أكثر من سطر */
+  text-shadow: 1px 1px 3px rgba(0, 0, 0, 0.3); /* ظل خفيف لزيادة البروز (اختياري) */
+}
 .loadingText, .errorText {
   text-align: center;
   margin: 1rem 0;
@@ -171,4 +182,93 @@
     margin-top: 8px;
     font-size: 0.9em;
     color: #ddfcb3;
+}
+
+.leaderboardPrompt {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  margin-top: 0.8rem;
+  margin-bottom: 1.5rem;
+  padding: 0 0.5rem;
+  font-weight: 700;
+  color: #ffffff;
+  line-height: 1.6;
+}
+
+.promptLine1,
+.promptLine2TextOnly, /* تم تغيير اسم الفئة */
+.promptSocialLinksContainer, /* فئة جديدة لحاوية الروابط */
+.promptLine3 {
+  margin-bottom: 0.3rem;
+  font-size: 1.1rem;
+}
+
+.promptLine1 {
+  /* أنماط السطر الأول */
+}
+
+/* أنماط النص الذي يسبق الروابط */
+.promptLine2TextOnly {
+  display: inline; /* لجعله يتماشى مع الروابط في نفس السطر على الشاشات الكبيرة */
+  margin-right: 0.3rem; /* مسافة صغيرة قبل الروابط */
+}
+
+/* حاوية الروابط والأيقونات */
+.promptSocialLinksContainer {
+  display: inline-flex; /* لجعله يتماشى مع النص في نفس السطر على الشاشات الكبيرة */
+  align-items: center;
+}
+
+.promptLine3 {
+  /* أنماط السطر الثالث */
+}
+
+.socialIconLink {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 0.4rem;
+  padding: 0.1rem;
+  transition: transform 0.2s ease;
+}
+
+.socialIconLink:hover {
+  transform: scale(1.15);
+}
+
+.promptSocialIcon {
+  width: 30px;
+  height: 30px;
+  fill: #aabbcc;
+}
+
+.socialIconLink:hover .promptSocialIcon {
+  fill: #87CEFA;
+}
+
+
+/* --- Media Query لشاشات الموبايل (مثلاً، أقل من أو يساوي 600px) --- */
+@media (max-width: 600px) {
+  .leaderboardPrompt p, /* استهداف جميع الفقرات داخل .leaderboardPrompt */
+  .promptSocialLinksContainer { /* استهداف حاوية الروابط */
+    display: block; /* اجعل كل فقرة وحاوية الروابط تأخذ سطراً كاملاً */
+    width: 100%;    /* تأكد أنها تأخذ العرض الكامل للتوسيط */
+    text-align: center; /* توسيط النص أو العناصر داخل كل بلوك */
+    margin-bottom: 0.5rem; /* مسافة موحدة بين الأسطر الجديدة */
+  }
+
+  /* تعديل الهوامش للنص الذي يسبق الروابط ليكون مناسبًا عندما يكون في سطر وحده */
+  .promptLine2TextOnly {
+    margin-right: 0; /* لا حاجة لهامش أيمن عندما يكون في سطر وحده */
+    margin-bottom: 0.2rem; /* مسافة صغيرة قبل سطر الأيقونات */
+  }
+
+  /* توسيط الأيقونات عندما تكون في سطر وحدها */
+  .promptSocialLinksContainer {
+    justify-content: center;
+    margin-top: 0.2rem; /* مسافة صغيرة فوق سطر الأيقونات */
+    margin-bottom: 0.5rem; /* مسافة تحت سطر الأيقونات */
+  }
 }

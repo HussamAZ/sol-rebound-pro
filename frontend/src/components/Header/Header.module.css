@@ -41,8 +41,22 @@
 .projectLogo {
   width: 90px;
   height: auto;
+  filter: drop-shadow(0 0 10px rgba(135, 245, 255, 0.401));
   
 }
+
+.logoLink {
+  display: inline-block; /* أو block، حسب تخطيطك */
+  text-decoration: none; /* لإزالة أي خط تحت الرابط */
+  border: none; /* لإزالة أي حدود قد يضيفها المتصفح للروابط */
+  outline: none; /* لإزالة أي إطار عند التركيز */
+}
+
+.logoLink:focus, .logoLink:active {
+  outline: none; /* تأكيد إزالة الإطار */
+  border: none;
+}
+
 
 .connectWalletButton {
   background: linear-gradient(25deg, #c773f2, #004080);
@@ -312,3 +326,39 @@
 .copyUrlButton:hover {
   background-color: #6b46c1;
 }
+.promoText {
+  font-size: 1.4rem; /* حجم خط أساسي كبير وواضح للشاشات العريضة */
+  font-weight: 700;
+  text-align: center;
+  margin: 0;
+  padding: 0 0.5rem;
+  line-height: 1.3;
+  text-shadow: 0 2px 5px rgba(0, 0, 0, 0.4); /* ظل خفيف لزيادة البروز */
+  /* اللون وتأثير التدرج يأتي من الفئة العامة 'gradient-text-bold' */
+}
+
+/* تعديلات التجاوب مع الشاشات المختلفة */
+
+/* للشاشات المتوسطة (Tablets) */
+@media (max-width: 1024px) {
+  .promoText {
+    font-size: 1.2rem;
+  }
+}
+
+/* للشاشات الصغيرة (Mobiles) حيث يتغير تخطيط الهيدر */
+@media (max-width: 768px) {
+  .promoText {
+    font-size: 1.1rem;
+    margin-top: 0.5rem; /* إضافة مسافة عندما يكون التخطيط عموديا */
+    margin-bottom: 0.5rem;
+  }
+}
+
+/* للشاشات الصغيرة جداً */
+@media (max-width: 480px) {
+  .promoText {
+    font-size: 1rem;
+  }
+}
+

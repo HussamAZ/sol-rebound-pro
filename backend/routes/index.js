@@ -6,7 +6,7 @@ const leaderboardRoutes = require('./leaderboardRoutes');
 const statsRoutes = require('./statsRoutes');
 const debugRoutes = require('./debugRoutes'); // تأكد من استيراده إذا كنت تستخدمه
 const userRoutes = require('./userRoutes');   // *** إضافة مسار المستخدمين الجديد ***
-
+const adminRoutes = require('./adminRoutes'); // <-- السطر الجديد
 // لا تحتاج لاستيراد مسارات metrics و swagger هنا إذا تم تركيبها مباشرة في server.js
 
 const router = express.Router();
@@ -18,6 +18,8 @@ router.use('/leaderboards', leaderboardRoutes);
 router.use('/stats', statsRoutes);
 router.use('/debug', debugRoutes);           // تأكد من تركيبه
 router.use('/users', userRoutes);            // *** تركيب مسار المستخدمين الجديد ***
+router.use('/admin', adminRoutes); // <-- السطر الجديد
+
 // يمكنك إضافة مسارات API أخرى هنا
 
 console.log("DEBUG: leaderboardRoutes mounted under /leaderboards");

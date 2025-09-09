@@ -1,15 +1,18 @@
 // src/components/Footer/Footer.js
 import React, { useState } from 'react';
+import { Link } from 'react-router-dom'; // <-- تأكد من وجود Link هنا
 import styles from './Footer.module.css';
 
 import { ReactComponent as TwitterIcon } from '../../assets/icons/twitter.svg';
 import { ReactComponent as TelegramIcon } from '../../assets/icons/telegram.svg';
+import { ReactComponent as GithubIcon } from '../../assets/icons/github.svg';
+
 
 
 // --- !! تعريف عنوان العقد هنا كثابت !! ---
-const CONTRACT_ADDRESS = "8RzqAPhqTcGd48DxErKV3PNsvZA7ogxXGwbar6oPhPnW";
+const CONTRACT_ADDRESS = "41cnmpptdc7sfxsEBw7rwyAMqwZLuV5KjQyC6SR4JW9Y";
 // --- !! تحديد رابط المستكشف (استخدم devnet حاليًا) !! ---
-const EXPLORER_LINK = `https://solscan.io/account/${CONTRACT_ADDRESS}?cluster=devnet`;
+const EXPLORER_LINK = `https://solscan.io/account/${CONTRACT_ADDRESS}?cluster=mainnet-beta`;
 // أو استخدم Solana Explorer: `https://explorer.solana.com/address/${CONTRACT_ADDRESS}?cluster=devnet`
 
 
@@ -85,7 +88,11 @@ const Footer = () => {
                 <div className={styles.followUsSection}> {/* إعادة تسمية الفئة للتوضيح */}
                     {/* القسم الأيمن سابقًا، أصبح الآن القسم الوحيد هنا */}
                     <div className={styles.followUsContent}> {/* فئة جديدة للمحتوى */}
-                        <img src="/sol_reb.png" alt="Sol Rebound Logo" className={styles.footerLogo} />
+                        {/* --- 2. تغليف الشعار بمكون Link --- */}
+                        <Link to="/" className={styles.footerLogoLink}> {/* فئة جديدة إذا أردت أنماط مختلفة عن الهيدر */}
+                            <img src="/sol_reb.png" alt="Sol Rebound Logo" className={styles.footerLogo} />
+                        </Link>
+                        {/* ---------------------------------- */}
                         <p className={styles.followText}>Follow us for updates:</p>
                         <div className={styles.socialIcons}>
                             <a href="https://x.com/SOLREBOUND" target="_blank" rel="noopener noreferrer" aria-label="Follow us on X">
@@ -93,6 +100,9 @@ const Footer = () => {
                             </a>
                             <a href="https://t.me/SolRebound" target="_blank" rel="noopener noreferrer" aria-label="Join our Telegram">
                                 <TelegramIcon className={styles.socialIcon} />
+                            </a>
+                            <a href="https://github.com/HussamAZ/sol-rebound-pro" target="_blank" rel="noopener noreferrer" aria-label="View on GitHub">
+                                <GithubIcon className={styles.socialIcon} />
                             </a>
                         </div>
                     </div>
@@ -102,11 +112,20 @@ const Footer = () => {
             <hr className={styles.footerDivider} />
             {/* --- !! إضافة عنوان العقد الذكي !! --- */}
             <div className={styles.contractInfo}>
-                 <span className={styles.contractLabel}>Smart Contract Address (Devnet):</span>
-                 <a href={EXPLORER_LINK} target="_blank" rel="noopener noreferrer" className={styles.contractAddressLink}>
-                     {CONTRACT_ADDRESS}
-                 </a>
+                 <span className={styles.contractLabel}>Smart Contract Address :</span>
+		 <div className={styles.addressWrapper}> {/* حاوية إضافية للتحكم في الرابط */}
+		        <a href={EXPLORER_LINK} target="_blank" rel="noopener noreferrer" className={styles.contractAddressLink}>
+		            {CONTRACT_ADDRESS}
+		        </a>
+	         </div>
             </div>
+            {/* --- إضافة الروابط الجديدة --- */}
+            <div className={styles.footerLinks}>
+                <Link to="/privacy-policy" className={styles.footerLinkItem}>Privacy Policy</Link>
+                <span className={styles.footerLinkSeparator}>|</span>
+                <Link to="/terms-and-conditions" className={styles.footerLinkItem}>Terms & Conditions</Link>
+            </div>
+            {/* ----------------------------- */}
              {/* ------------------------------------- */}
             <h4 className={`${styles.footerText} gradient-text-bold`}>
                 Powered by Solana | Sol Rebound Pro © {new Date().getFullYear()}

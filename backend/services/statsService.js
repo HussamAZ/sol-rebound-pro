@@ -1,43 +1,38 @@
 // backend/services/statsService.js
-const Referral = require('../models/Referral'); // نحتاج موديل الإحالات لحساب الإحصائيات
-const PlatformEarning = require('../models/PlatformEarning'); // نحتاج موديل أرباح المنصة لحساب الرسوم
-const { LAMPORTS_PER_SOL, RENT_PER_EMPTY_ATA_LAMPORTS, REFERRAL_COMMISSION_PERCENT_CONTRACT, PLATFORM_FEE_PERCENT_CONTRACT } = require('../config/constants');
+// الموديلات التي سنعتمد عليها
+const PlatformEarning = require('../models/PlatformEarning');
+const Referral = require('../models/Referral');
+const { LAMPORTS_PER_SOL, RENT_PER_EMPTY_ATA_LAMPORTS } = require('../config/constants');
 
 async function calculateOverallStats() {
-    console.log("StatsService: Calculating overall project statistics...");
+    console.log("StatsService: Calculating overall project statistics from 'platformearnings' collection...");
     try {
-        // 1. حساب إجمالي عدد الحسابات المغلقة وإجمالي أرباح المحيلين من Referral model
-        const referralStats = await Referral.aggregate([
-            {
-                $group: {
-                    _id: null, // تجميع كل السجلات
-                    totalClosedAccounts: { $sum: '$closedAccounts' }, // مجموع كل إغلاقات المستخدمين
-                    totalReferralEarningsLamports: { $sum: '$totalEarnings' } // مجموع كل أرباح المحيلين
-                }
-            }
+        // حساب إجمالي الحسابات المغلقة من مجموعة الأرباح الدائمة
+        const earningStats = await PlatformEarning.aggregate([
+            { $group: { _id: null, totalClosedAccounts: { $sum: '$closedCount' } } }
         ]);
+        const totalClosedAccounts = earningStats[0]?.totalClosedAccounts || 0;
 
-        const totalClosedAccounts = referralStats[0]?.totalClosedAccounts || 0;
+        // حساب إجمالي أرباح المحيلين (هذا الحقل دائم في سجلات المستخدمين)
+        const referralStats = await Referral.aggregate([
+            { $group: { _id: null, totalReferralEarningsLamports: { $sum: '$totalEarnings' } } }
+        ]);
         const totalReferralPayoutsLamports = referralStats[0]?.totalReferralEarningsLamports || 0;
 
-        // 2. حساب إجمالي SOL المسترجع للمستخدمين
-        // كل حساب مغلق يسترجع RENT_PER_EMPTY_ATA_LAMPORTS للمستخدم
+        // حساب باقي الإحصائيات بناءً على القيم المجمعة
         const totalSolRecoveredLamports = BigInt(totalClosedAccounts) * BigInt(RENT_PER_EMPTY_ATA_LAMPORTS);
 
-        // 3. تجميع النتائج وتحويلها لـ SOL
         const stats = {
             totalClosedAccounts: totalClosedAccounts,
             totalSolRecoveredForUsers: Number(totalSolRecoveredLamports) / LAMPORTS_PER_SOL,
-            totalSolPaidToReferrers: totalReferralPayoutsLamports / LAMPORTS_PER_SOL, // totalEarnings في Referral model هي الأرباح الصافية المدفوعة للمحيل
+            totalSolPaidToReferrers: totalReferralPayoutsLamports / LAMPORTS_PER_SOL,
         };
 
-        console.log("StatsService: Overall stats calculated:", stats);
+        console.log("StatsService: Overall stats calculated successfully:", stats);
         return stats;
 
     } catch (error) {
         console.error("!!! StatsService ERROR calculating overall stats:", error);
-        // أرجع قيم افتراضية أو ارمِ الخطأ
-        // throw error; // أو
         return {
             totalClosedAccounts: 0,
             totalSolRecoveredForUsers: 0,

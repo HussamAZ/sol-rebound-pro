@@ -28,12 +28,13 @@
         "start": "craco start",
         "build": "craco build",
         "test": "craco test"
-    },"jest": {
-    "transformIgnorePatterns": [
-      "/node_modules/(?!(axios)/)"
-    ],   
-     "resetMocks": true 
-  },
+    },
+    "jest": {
+        "transformIgnorePatterns": [
+            "/node_modules/(?!(axios)/)"
+        ],
+        "resetMocks": true
+    },
     "eslintConfig": {
         "extends": [
             "react-app",

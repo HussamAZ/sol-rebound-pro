@@ -28,29 +28,32 @@ function encryptData(data) {
     }
 }
 
-// دالة لفك تشفير البيانات
+/**
+ * (النسخة النهائية)
+ * دالة Getter لفك تشفير حقل المحيل.
+ * تتحقق مما إذا كانت البيانات مشفرة قبل محاولة فك التشفير.
+ * @param {string} encryptedDataWithMeta - البيانات التي قد تكون مشفرة.
+ * @returns {string} - البيانات مفكوكة التشفير، أو البيانات الأصلية إذا لم تكن مشفرة أو حدث خطأ.
+ */
 function decryptData(encryptedDataWithMeta) {
-    console.log(`DECRYPT_DEBUG: decryptData called with: [${encryptedDataWithMeta}] (Type: ${typeof encryptedDataWithMeta})`);
     const ENCRYPTION_KEY = process.env.ENCRYPTION_KEY;
 
-    if (!ENCRYPTION_KEY || ENCRYPTION_KEY.length !== 64) {
-        console.warn("DECRYPT_DEBUG: Decryption skipped: Key missing or invalid.");
-        return encryptedDataWithMeta;
-    }
-    if (!encryptedDataWithMeta || typeof encryptedDataWithMeta !== 'string' || !encryptedDataWithMeta.includes(':')) {
-        console.warn("DECRYPT_DEBUG: Decryption skipped: Data format incorrect (not string or no ':'). Value:", encryptedDataWithMeta);
+    // الشرط الأساسي: إذا لم يكن هناك مفتاح، أو البيانات ليست نصًا، أو لا تحتوي على تنسيق التشفير، أرجعها كما هي.
+    if (!ENCRYPTION_KEY || typeof encryptedDataWithMeta !== 'string' || !encryptedDataWithMeta.includes(':')) {
         return encryptedDataWithMeta;
     }
 
     try {
         const parts = encryptedDataWithMeta.split(':');
+        // تحقق إضافي من صحة التنسيق
         if (parts.length !== 3) {
-            console.warn("DECRYPT_DEBUG: Decryption skipped: Invalid format (not 3 parts). Value:", encryptedDataWithMeta);
             return encryptedDataWithMeta;
         }
+
         const [ivHex, authTagHex, encryptedHex] = parts;
+        
+        // التحقق من أن الأجزاء هي سلاسل سداسية صالحة
         if (!/^[0-9a-fA-F]+$/.test(ivHex) || !/^[0-9a-fA-F]+$/.test(authTagHex) || !/^[0-9a-fA-F]+$/.test(encryptedHex)) {
-             console.warn("DECRYPT_DEBUG: Decryption skipped: Invalid hex part. Value:", encryptedDataWithMeta);
              return encryptedDataWithMeta;
         }
 
@@ -58,19 +61,30 @@ function decryptData(encryptedDataWithMeta) {
         const authTag = Buffer.from(authTagHex, 'hex');
         const algorithm = 'aes-256-gcm';
         const decipher = crypto.createDecipheriv(algorithm, Buffer.from(ENCRYPTION_KEY, 'hex'), iv);
+        
         decipher.setAuthTag(authTag);
+        
         let decrypted = decipher.update(encryptedHex, 'hex', 'utf8');
         decrypted += decipher.final('utf8');
-        console.log(`DECRYPT_DEBUG: Decryption successful. Original: [${encryptedDataWithMeta}], Decrypted: [${decrypted}]`);
+        
         return decrypted;
     } catch (error) {
-        console.error("DECRYPT_DEBUG: Decryption failed for data:", encryptedDataWithMeta, "Error:", error.message);
+        // في حالة الإنتاج، من الأفضل تسجيل الخطأ فقط وعدم إغراق السجلات
+        console.error("DECRYPTION_ERROR: Failed to decrypt data. Returning encrypted value. Error:", error.message);
         return encryptedDataWithMeta; // أرجع القيمة المشفرة عند الفشل
     }
 }
 
 const referralSchema = new mongoose.Schema({
     user: { type: String, required: true, unique: true, index: true },
+
+    referralCode: { // <-- **الحقل الجديد**
+        type: String,
+        unique: true,   // <-- يضمن عدم وجود رمزين متطابقين
+        sparse: true,   // <-- مهم: يسمح بوجود قيم null متعددة (للمستخدمين القدامى الذين ليس لديهم رمز بعد)
+        index: true
+    },
+
     referrer: {
         type: String,
         index: true,
@@ -91,3 +105,4 @@ const referralSchema = new mongoose.Schema({
 });
 
 module.exports = mongoose.model('Referral', referralSchema);
+

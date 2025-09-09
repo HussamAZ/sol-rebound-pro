@@ -1,0 +1,22 @@
+[package]
+name = "ata_claim_contract"
+version = "0.1.0"
+description = "ATA Claim Contract"
+edition = "2021"
+
+[lib]
+crate-type = ["cdylib", "lib"]
+name = "ata_claim_contract_lib" # هذا الاسم سيُستخدم لتوليد أنواع IDL
+
+[features]
+default = []
+cpi = ["no-entrypoint"]
+no-entrypoint = []
+no-idl = []
+no-log-ix-name = []
+
+[dependencies]
+anchor-lang = "0.29.0"
+anchor-spl = "0.29.0"
+solana-program  = "1.16.14" 
+# لأن anchor-lang و anchor-spl سيعتمدان على الإصدار المناسب منه.

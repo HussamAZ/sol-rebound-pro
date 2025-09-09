@@ -48,6 +48,7 @@ const TopReferrersTable = ({ data, isLoading, error }) => {
             {error && <p className={styles.errorText}>Warning: Could not load leaderboard data.</p>}
 
             <div style={{ overflowX: 'auto' }}>
+	      <div className={styles.tableResponsiveWrapper}>
                 <table className={styles.leaderboardTable}>
                     <thead>
                     <tr>
@@ -105,6 +106,7 @@ const TopReferrersTable = ({ data, isLoading, error }) => {
                         )}
                     </tbody>
                 </table>
+	      </div>
             </div>
         </div>
     );

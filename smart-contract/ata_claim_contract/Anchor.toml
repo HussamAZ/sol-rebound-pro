@@ -1,0 +1,44 @@
+[toolchain]
+# عادة لا تحتاج لتحديد bpf_sdk_path إذا كان solana-cli (الإصدار 1.18.18 في حالتنا)
+# مثبتًا بشكل صحيح، فهو يعرف أين يجد SBF SDK الخاص به.
+# يمكنك إلغاء التعليق وتعديل المسار أدناه فقط إذا واجهت مشاكل محددة في العثور على SBF SDK أثناء البناء.
+# bpf_sdk_path = "/home/asmaa/.local/share/solana/install/releases/1.18.18/solana-release/bin/sdk/bpf"
+
+[features]
+# إعدادات الميزات الافتراضية لـ Anchor، عادة لا تحتاج للتغيير لمشروع بسيط.
+seeds = false
+skip-lint = false
+
+# تعريف البرامج (العقود الذكية) داخل هذا المشروع.
+# نحن نستهدف شبكة mainnet-beta.
+[programs.mainnet]
+ata_claim_contract = "E1Vi5qXaBXsbvKo9ERYPBbpcaaeWDAMY9DoTH7V4LyfR"
+
+
+
+[registry]
+# هذا هو السجل الافتراضي لـ Anchor، يستخدم لنشر واسترجاع الحزم إذا كنت ستستخدم هذه الميزة.
+url = "https://api.apr.dev"
+
+[provider]
+# الشبكة التي سيتم التفاعل معها (نشر، اختبار، استدعاء التعليمات).
+cluster = "mainnet"
+
+# المسار إلى ملف مفتاح JSON الخاص بالمحفظة التي ستدفع رسوم المعاملات
+# (مثل رسوم النشر، إنشاء الحسابات، إلخ) عند التفاعل مع الشبكة المحددة.
+# تأكد أن هذا المسار صحيح من داخل بيئة WSL وأن المحفظة ممولة بالـ SOL على Mainnet.
+wallet = "/mnt/d/smart/solana-mainnet-deployer.json"
+
+# (اختياري) يمكنك تحديد نقطة نهاية RPC URL بشكل صريح هنا.
+# إذا لم يتم تحديدها، سيستخدم Anchor عادةً إعدادات RPC الافتراضية من تكوين Solana CLI.
+# إذا كنت تريد استخدام Helius RPC بشكل دائم لمشروع Anchor هذا:
+json_rpc_url = "https://mainnet.helius-rpc.com/?api-key=da599dc4-04a0-46b1-991d-ea7cf885dbd7"
+
+[scripts]
+# الأمر الذي سيتم تشغيله عند تنفيذ `anchor test`.
+# يفترض أن لديك اختبارات TypeScript في مجلد `tests/` و `tsconfig.json` مهيأ.
+test = "yarn run ts-mocha -p ./tsconfig.json -t 1000000 tests/**/*.ts"
+
+# (اختياري، ولكن مفيد) يمكنك إضافة أوامر مخصصة هنا
+# [scripts.my_custom_command]
+# command = "echo 'Hello from custom command!'"

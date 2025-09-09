@@ -2,10 +2,15 @@
 const mongoose = require('mongoose');
 
 const platformEarningSchema = new mongoose.Schema({
-  amount: { // صافي رسوم المنصة المحولة للخزينة (Lamports)
+  amount: { // صافي رسوم المنصة بالـ lamports
     type: Number,
     required: true,
     min: 0
+  },
+  closedCount: { // <-- **الحقل الجديد والمهم**
+    type: Number,
+    required: false,
+    default: 0  // يجب أن يكون هناك حساب واحد على الأقل تم إغلاقه
   },
   timestamp: { // وقت تأكيد المعاملة أو وقت تسجيلها
     type: Date,
@@ -24,7 +29,6 @@ const platformEarningSchema = new mongoose.Schema({
     required: true,
     index: true
   },
-  // يمكنك إضافة حقول أخرى مثل referrerPublicKey إذا أردت
 });
 
 module.exports = mongoose.model('PlatformEarning', platformEarningSchema);

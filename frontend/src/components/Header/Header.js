@@ -1,5 +1,6 @@
 // src/components/Header/Header.js
 import React, { useMemo, useCallback, useState, useEffect } from 'react'; // أضف useState, useEffect
+import { Link } from 'react-router-dom'; // <-- 1. استيراد Link
 import { useWallet } from '@solana/wallet-adapter-react';
 import { useWalletModal } from '@solana/wallet-adapter-react-ui';
 import styles from './Header.module.css'; // استيراد CSS Module
@@ -59,7 +60,7 @@ const Header = ({ error, lastSignature }) => {
     // دالة لعرض رابط Explorer (مثال)
     const getExplorerLink = (signature) => {
         // استخدم cluster=devnet أو mainnet-beta حسب الشبكة
-        return `https://explorer.solana.com/tx/${signature}?cluster=devnet`;
+        return `https://explorer.solana.com/tx/${signature}?cluster=mainnet-beta`;
     }
 
     const handleOpenInPhantom = useCallback(() => {
@@ -98,19 +99,25 @@ const Header = ({ error, lastSignature }) => {
                 <div className={styles.header}>
                     {/* القسم الأيسر: الشعار */}
                     <div className={styles.leftSection}>
-                        <img src="/sol_reb.png" alt="SOL Rebound Logo" className={styles.projectLogo} />
-                        {/* يمكنك إضافة اسم التطبيق هنا إذا أردت */}
-                        {/* <span style={{ color: 'white', fontWeight: 'bold' }}>SOL Rebound Pro</span> */}
+                        {/* --- 2. تغليف الشعار بمكون Link --- */}
+                        <Link to="/" className={styles.logoLink}> {/* أضفت فئة logoLink للتحكم في النمط إذا لزم الأمر */}
+                            <img src="/sol_reb.png" alt="SOL Rebound Pro Logo" className={styles.projectLogo} />
+                        </Link>
+                        {/* ------------------------------------ */}
                     </div>
 
                     {/* القسم المركزي: معلومات المحفظة */}
                     <div className={styles.centerSection}>
-                        {connected && publicKey && (
+                        {connected && publicKey ? (
+                            // هذا الجزء يظهر عندما تكون المحفظة متصلة (يبقى كما هو)
                             <div className={styles.walletInfo}>
                                 <span>{shortAddress}</span>
-                                {/* يمكنك إضافة عرض الرصيد هنا لاحقًا إذا أردت */}
-                                {/* <span className={styles.balance}>Balance: X SOL</span> */}
                             </div>
+                        ) : (
+                             // هذا الجزء الجديد يظهر عندما لا تكون المحفظة متصلة
+                            <h2 className={`${styles.promoText} gradient-text-bold`}>
+                                Scan & claim lost SOL in 60 secs! + Earn 25% SOL cash PER REFERRAL!
+                            </h2>
                         )}
                     </div>
 
@@ -121,8 +128,12 @@ const Header = ({ error, lastSignature }) => {
                                 onClick={handleConnectClick}
                                 disabled={connecting}
                                 className={styles.connectWalletButton}
+                                style={{  // إضافة ستايل إضافي لو أردت
+                                    backgroundColor: '#FF6B00', 
+                                    fontWeight: 'bold'
+                                }}
                             >
-                                {connecting ? 'Connecting...' : 'Connect Wallet'}
+                                {connecting ? 'Connecting...' : 'GET YOUR SOL NOW!🔥'}
                             </button>
                         ) : (
                             <button className={styles.disconnectButton} onClick={disconnect}>
@@ -147,40 +158,6 @@ const Header = ({ error, lastSignature }) => {
                     </p> 
                 )}
             </div>
-            {/* --- !!! عرض رسالة التحذير لمستخدمي الموبايل !!! --- */}
-            {showMobileGuidance && (
-                <div className={styles.mobileGuidanceContainer}>
-                    <p className={styles.mobileWarningText}>
-                        📱 For the best experience, please use the <strong>Phantom Wallet's in-app browser</strong>.
-                    </p>
-                    <button
-                        onClick={handleOpenInPhantom}
-                        className={styles.openInPhantomButton}
-                    >
-                        🚀 Try Opening in Phantom App
-                    </button>
-                    <p className={styles.manualStepsText}>
-                        If it doesn't open directly to our site, please:
-                        <br />1. Open Phantom manually.
-                        <br />2. Go to the Browser tab (🌐 icon).
-                        <br />3. Paste this link:
-                    </p>
-                    <div className={styles.copyLinkContainer}>
-                        <input
-                            type="text"
-                            value={appUrlForCopy}
-                            readOnly
-                            className={styles.urlInputForCopy}
-                        />
-                        <button
-                            onClick={handleCopyAppUrl}
-                            className={styles.copyUrlButton}
-                        >
-                            {copyButtonText}
-                        </button>
-                    </div>
-                </div>
-            )}
         </>
     );
 };

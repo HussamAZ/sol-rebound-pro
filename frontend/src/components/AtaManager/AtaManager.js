@@ -1,225 +1,301 @@
 // src/components/AtaManager/AtaManager.js
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useConnection, useWallet } from '@solana/wallet-adapter-react';
-import { PublicKey, Transaction, TOKEN_PROGRAM_ID } from '@solana/web3.js'; // استيراد TOKEN_PROGRAM_ID هنا
-import axios from 'axios';
+import { PublicKey, Transaction, TOKEN_PROGRAM_ID } from '@solana/web3.js';
+import axios from 'axios'; // لا يزال يُستخدم بواسطة apiClient (بشكل غير مباشر)
 import { Buffer } from 'buffer';
 import styles from './AtaManager.module.css';
 import { toast } from 'react-toastify';
-
-import apiClient from '../../api/axiosInstance'; // <-- المسار الصحيح
-
-
+import apiClient from '../../api/axiosInstance';
 
 // تعريف Props المستلمة من App.js
 const AtaManager = ({
-    setError,               // دالة لتحديث الخطأ العام في App
+    // setError, // تم تقليل استخدامه المباشر، لكن يمكن إعادته إذا لزم الأمر
     setLastSignature,       // دالة لتحديث آخر توقيع في App
     referrerFromUrl,        // المحيل من URL
     onSuccessfulClose,      // دالة لتشغيل التحديث الشامل في App
     initialEmptyAtas,       // قائمة ATAs المكتشفة من App
     isLoadingAtas           // حالة تحميل قائمة ATAs من App
 }) => {
-    // === Hooks ===
-    const { connection } = useConnection(); // نحتاج connection للإرسال والتأكيد
-    const { publicKey, connected, signTransaction } = useWallet(); // نحتاج هذه لتشغيل العملية
-    // --- !! انقل التعريفات إلى هنا !! ---
+    const { connection } = useConnection();
+    const { publicKey, connected, signTransaction } = useWallet();
+
     const RENT_PER_EMPTY_ATA_SOL = 0.00203928;
     const PLATFORM_FEE_PERCENT = 0.25; // للعرض فقط
-    // ---------------------------------
-    // === الحالة الداخلية للمكون ===
-    const [emptyATAs, setEmptyATAs] = useState(initialEmptyAtas || []); // القائمة الفعلية للعرض
-    const [selectedATAs, setSelectedATAs] = useState([]);           // القائمة المختارة
-    const [netSolForSelected, setNetSolForSelected] = useState(0);    // المبلغ المقدر
-    const [isProcessing, setIsProcessing] = useState(false);        // هل عملية الإغلاق جارية؟
 
-    // === Effects ===
+    const [emptyATAs, setEmptyATAs] = useState(initialEmptyAtas || []);
+    const [selectedATAs, setSelectedATAs] = useState([]);
+    const [netSolForSelected, setNetSolForSelected] = useState(0);
+    const [isProcessing, setIsProcessing] = useState(false);
+    const MAX_SELECTION_LIMIT = 8;
+    // currentTransactionSignature لم تعد ضرورية كحالة منفصلة هنا لأن localSignatureAttempt كافية
+    // const [currentTransactionSignature, setCurrentTransactionSignature] = useState('');
 
-    // تحديث قائمة emptyATAs الداخلية عند تغير الـ prop القادم من App
     useEffect(() => {
-        console.log("AtaManager: Received new initialEmptyAtas count:", (initialEmptyAtas || []).length);
         setEmptyATAs(initialEmptyAtas || []);
-        // مسح القائمة المختارة عند تحديث القائمة الرئيسية
-        setSelectedATAs([]);
+        if (initialEmptyAtas && initialEmptyAtas.length > 0) {
+            setSelectedATAs(prevSelected => prevSelected.filter(sAta => initialEmptyAtas.includes(sAta)));
+        } else {
+            setSelectedATAs([]);
+        }
     }, [initialEmptyAtas]);
 
-    // إعادة حساب المبلغ المقدر عند تغير القائمة المختارة
     useEffect(() => {
         const netRecoveryPerATA = RENT_PER_EMPTY_ATA_SOL * (1 - PLATFORM_FEE_PERCENT);
         const calculatedNetSol = selectedATAs.length * netRecoveryPerATA;
         setNetSolForSelected(calculatedNetSol);
-        console.log(`AtaManager: Calculated net SOL for ${selectedATAs.length} selected ATAs: ${calculatedNetSol}`);
-    }, [selectedATAs]);
+    }, [selectedATAs, RENT_PER_EMPTY_ATA_SOL, PLATFORM_FEE_PERCENT]);
 
-    // === Callbacks ===
-
-    // التعامل مع تغيير مربع الاختيار
     const handleCheckboxChange = useCallback((ata) => {
         setSelectedATAs(prevSelected =>
             prevSelected.includes(ata)
                 ? prevSelected.filter(selectedAta => selectedAta !== ata)
                 : [...prevSelected, ata]
         );
-    }, []); // لا توجد اعتماديات متغيرة
+    }, []);
 
-    // التعامل مع زر "Select All"
     const handleSelectAll = useCallback(() => {
-        // حدد فقط ما هو متاح وليس مختارًا بالفعل
         const availableToSelect = emptyATAs.filter(ata => !selectedATAs.includes(ata));
-        setSelectedATAs(prevSelected => [...prevSelected, ...availableToSelect]);
-    }, [emptyATAs, selectedATAs]); // أضف selectedATAs للاعتماديات هنا
+        // حدد فقط العدد المسموح به للوصول إلى الحد الأقصى
+        const howManyCanISelect = MAX_SELECTION_LIMIT - selectedATAs.length;
+        const itemsToSelect = availableToSelect.slice(0, howManyCanISelect);
+        setSelectedATAs(prevSelected => [...prevSelected, ...itemsToSelect]);
+    }, [emptyATAs, selectedATAs]);
 
-    // التعامل مع زر "Deselect All"
     const handleDeselectAll = useCallback(() => {
         setSelectedATAs([]);
     }, []);
 
-    // قائمة ATAs المتاحة (غير المختارة)
     const availableATAs = useMemo(() => {
-        // التأكد من أن emptyATAs مصفوفة قبل الفلترة
         if (!Array.isArray(emptyATAs)) return [];
         return emptyATAs.filter(ata => !selectedATAs.includes(ata));
     }, [emptyATAs, selectedATAs]);
 
-    // --- الدالة الرئيسية لإغلاق الحسابات ---
+    const shortenAddress = (address) => {
+        if (!address || typeof address !== 'string') return 'N/A';
+        return `${address.slice(0, 6)}...${address.slice(-4)}`;
+    };
+
+    const customConfirmTransaction = async (signature, conn) => {
+        const MAX_CONFIRM_ATTEMPTS = 25; // زدت عدد المحاولات قليلاً
+        const RETRY_DELAY_MS = 2500;    // زدت التأخير قليلاً
+        let attempts = 0;
+
+        console.log(`AtaManager (customConfirm): Starting confirmation for ${shortenAddress(signature)}...`);
+        while (attempts < MAX_CONFIRM_ATTEMPTS) {
+            attempts++;
+            try {
+                // استخدام getSignatureStatuses بدلاً من getSignatureStatus للحصول على معلومات أكثر تفصيلاً إذا أمكن
+                // ولكن getSignatureStatus أبسط ومناسب هنا.
+                const status = await conn.getSignatureStatus(signature, {
+                    searchTransactionHistory: true,
+                });
+
+                console.log(`AtaManager (customConfirm): Attempt ${attempts}, Sig: ${shortenAddress(signature)}, Status Obj:`, status);
+
+                if (status && status.value) {
+                    if (status.value.err) {
+                        console.error(`AtaManager (customConfirm): Transaction ${shortenAddress(signature)} failed on-chain (err object present). Error:`, status.value.err);
+                        throw new Error(`Transaction failed on-chain: ${JSON.stringify(status.value.err)}`);
+                    }
+                    // التحقق من confirmationStatus
+                    if (status.value.confirmationStatus === 'confirmed' || status.value.confirmationStatus === 'finalized') {
+                        console.log(`AtaManager (customConfirm): Transaction ${shortenAddress(signature)} confirmed with status: ${status.value.confirmationStatus}`);
+                        return { value: { err: null } }; // محاكاة استجابة confirmTransaction الناجحة
+                    }
+                    console.log(`AtaManager (customConfirm): Attempt ${attempts}, Sig: ${shortenAddress(signature)}, Current status: ${status.value.confirmationStatus || 'processing'}`);
+                } else {
+                    console.log(`AtaManager (customConfirm): Attempt ${attempts}, Sig: ${shortenAddress(signature)}, No status value yet or status is null.`);
+                }
+            } catch (error) {
+                console.warn(`AtaManager (customConfirm): Error in getSignatureStatus (Attempt ${attempts}) for ${shortenAddress(signature)}: ${error.message}. Retrying...`);
+                // لا ترمي الخطأ هنا مباشرة، دع الحلقة تستمر
+            }
+
+            if (attempts < MAX_CONFIRM_ATTEMPTS) {
+                await new Promise(resolve => setTimeout(resolve, RETRY_DELAY_MS));
+            }
+        }
+        console.error(`AtaManager (customConfirm): Transaction (Sig: ${shortenAddress(signature)}) could not be confirmed after ${MAX_CONFIRM_ATTEMPTS} attempts.`);
+        throw new Error(`Transaction (Sig: ${shortenAddress(signature)}) could not be confirmed after ${MAX_CONFIRM_ATTEMPTS} attempts.`);
+    };
+
     const handleCloseAccounts = useCallback(async () => {
-        console.log("TEST DEBUG: handleCloseAccounts triggered!"); // <--- أضف هذا
-        // 1. التحققات الأولية
         if (!publicKey || !signTransaction || !connected || selectedATAs.length === 0) {
-            setError("Please connect wallet and select at least one account to close.");
+            toast.error("Please connect wallet and select at least one account to close.");
             return;
         }
         if (isProcessing) {
-            console.warn("AtaManager: Close process already in progress.");
+            toast.warn("Close process already in progress.");
             return;
         }
 
-        // 2. إعداد الحالة الأولية للمعالجة
         setIsProcessing(true);
-        //setError('');
-        setLastSignature('');
+        setLastSignature(''); // مسح التوقيع العام المعروض في الهيدر
 
-        const atasToClose = [...selectedATAs]; // إنشاء نسخة لتجنب التعديل المباشر
-        let signature = '';
+        const atasToClose = [...selectedATAs];
+        let preparedTxBase64 = '';
+        let platformFeeFromBackend = '0';
+        let localSignatureAttempt = ''; // لتخزين توقيع المحاولة الحالية
+
+        const toastConfirmId = `confirm-${Date.now()}`; // معرف فريد لإشعار التأكيد
 
         try {
-            // 3. تحضير بيانات الطلب
+            console.log("AtaManager: Preparing transaction...");
             const requestData = {
                 userPublicKeyString: publicKey.toBase58(),
                 ataAddresses: atasToClose,
                 referrerPublicKeyString: referrerFromUrl
             };
-            console.log("AtaManager: Sending close request...", requestData);
-
-            // 4. استدعاء API التحضير
-            const prepareResponse = await apiClient.post('/transactions/prepare-close', requestData); // إزالة /api
+            const prepareResponse = await apiClient.post('/transactions/prepare-close', requestData);
             if (!prepareResponse.data?.success || !prepareResponse.data.transaction || prepareResponse.data.platformFeeLamports === undefined) {
                 throw new Error(prepareResponse.data?.error || 'Invalid response from prepare transaction API.');
             }
-            const platformFeeFromBackend = prepareResponse.data.platformFeeLamports;
-            const transactionBase64 = prepareResponse.data.transaction;
+            preparedTxBase64 = prepareResponse.data.transaction;
+            platformFeeFromBackend = prepareResponse.data.platformFeeLamports;
             console.log("AtaManager: Transaction prepared by backend.");
+        
 
-            // 5. تحويل وتوقيع المعاملة
-            const transaction = Transaction.from(Buffer.from(transactionBase64, 'base64'));
+            const transaction = Transaction.from(Buffer.from(preparedTxBase64, 'base64'));
             console.log("AtaManager: Requesting transaction signature from wallet...");
             const signedTx = await signTransaction(transaction);
             console.log("AtaManager: Transaction signed by user.");
 
-            // 6. إرسال المعاملة للشبكة
             console.log("AtaManager: Sending signed transaction to network...");
-            signature = await connection.sendRawTransaction(signedTx.serialize());
-            setLastSignature(signature); // تحديث التوقيع العام
-            console.log(`AtaManager: Transaction sent successfully. Signature: ${signature}`);
+            localSignatureAttempt = await connection.sendRawTransaction(signedTx.serialize(), {
+                skipPreflight: false,
+                preflightCommitment: 'confirmed',
+            });
+            setLastSignature(localSignatureAttempt);
+            console.log(`AtaManager: Transaction sent. Signature: ${localSignatureAttempt}`);
+            toast.info(`Transaction sent (Sig: ${shortenAddress(localSignatureAttempt)}). Confirming... Please wait.`, {
+                toastId: toastConfirmId,
+                autoClose: false, // لا تغلق تلقائيًا
+                isLoading: true, // أظهر أيقونة التحميل
+            });
 
-            // 7. تأكيد المعاملة
-            console.log(`AtaManager: Confirming transaction ${signature}...`);
-            const { blockhash, lastValidBlockHeight } = await connection.getLatestBlockhash('confirmed');
-            const confirmation = await connection.confirmTransaction({ signature, blockhash, lastValidBlockHeight }, 'confirmed');
-            if (confirmation.value.err) {
-                const confirmError = JSON.stringify(confirmation.value.err);
-                console.error("AtaManager: Transaction confirmation failed on chain.", confirmError);
-                throw new Error(`Transaction confirmation failed: ${confirmError}`);
+            console.log(`AtaManager: Custom confirming transaction ${localSignatureAttempt}...`);
+            await customConfirmTransaction(localSignatureAttempt, connection);
+            toast.dismiss(toastConfirmId); // إزالة إشعار "Confirming..."
+
+            console.log(`AtaManager: Transaction ${localSignatureAttempt} confirmed successfully (custom confirm).`);
+	    // ===================================================================
+            // === بداية كود تتبع التحويلات في إعلانات جوجل ===
+            // ===================================================================
+            if (window.gtag) {
+		const conversionId = 'AW-17115275596/dmCzCL2s8tgaEMzCmeE_'; // <-- استبدل هذا بالمعرف من Google Ads
+                console.log(`Sending 'conversion' event to Google Ads with ID: ${conversionId}`);
+                window.gtag('event', 'conversion', {
+                    'send_to': conversionId,
+                    'transaction_id': localSignatureAttempt // (مهم جدًا) إرسال توقيع المعاملة لمنع حساب التحويلات المكررة
+                });
+            } else {
+                console.warn("Google Tag (gtag.js) not found. Conversion event not sent.");
             }
-            console.log(`AtaManager: Transaction ${signature} confirmed successfully.`);
-            toast.success(`Successfully closed ${atasToClose.length} account(s)!`); // <-- Toast نجاح//alert(`Successfully closed ${atasToClose.length} accounts! Transaction: ${signature}`); // إشعار بسيط
-
-            // 8. إخطار الباك اند بنجاح المعاملة
+            // ===================================================================
+            // === نهاية كود تتبع التحويلات ===
+            // ===================================================================
+            toast.success(`Successfully closed ${atasToClose.length} account(s)! (Sig: ${shortenAddress(localSignatureAttempt)})`);
+	    // --- !! بداية تتبع حدث Google Tag Manager / Google Analytics !! ---
+            if (window.gtag) {
+                window.gtag('event', 'atas_closed_successfully', {
+                    'event_category': 'AtaManagement',
+                    'event_label': `User ${publicKey ? publicKey.toBase58().substring(0,10) : 'Unknown'} closed ATAs`,
+                    'value': atasToClose.length, // عدد الحسابات المغلقة
+                    'transaction_id': localSignatureAttempt // (اختياري) توقيع المعاملة كمعرف
+                });
+                console.log("AtaManager: gtag event 'atas_closed_successfully' sent. Count:", atasToClose.length);
+            }
+            // --- !! نهاية تتبع حدث Google Tag Manager / Google Analytics !! ---
             try {
-                const confirmationData = { signature, userPublicKeyString: requestData.userPublicKeyString, referrerPublicKeyString: requestData.referrerPublicKeyString, closedCount: atasToClose.length, platformFeeLamportsString: platformFeeFromBackend };
+                const confirmationData = {
+                    signature: localSignatureAttempt,
+                    userPublicKeyString: publicKey.toBase58(),
+                    referrerPublicKeyString: referrerFromUrl,
+                    closedCount: atasToClose.length,
+                    platformFeeLamportsString: platformFeeFromBackend
+                };
                 console.log("AtaManager: Sending confirmation to backend...", confirmationData);
-                const dbUpdateResponse = await apiClient.post('/transactions/confirm-close', confirmationData); // إزالة /api
+                const dbUpdateResponse = await apiClient.post('/transactions/confirm-close', confirmationData);
                 if (!dbUpdateResponse.data?.success) {
                     console.warn("AtaManager: Backend DB update failed:", dbUpdateResponse.data?.error);
-                    toast.warn("Backend stats update might be delayed."); // <-- Toast تحذير
-                    //setError(prev => `${prev} | Backend stats update might be delayed.`.trim());
+                    toast.warn("Backend stats update might be delayed for this transaction.");
                 } else {
                     console.log("AtaManager: Backend DB update successful.");
                 }
             } catch (dbError) {
                 console.error("AtaManager: Network error sending confirmation to backend:", dbError);
-                toast.warn("Network error updating backend records."); // <-- Toast تحذير
-               // setError(prev => `${prev} | Network error updating backend records. Stats might be delayed.`.trim());
+                toast.warn("Network error updating backend records for this transaction.");
             }
 
-            // --- !!! 9. استدعاء دالة التحديث الشامل من App.js !!! ---
-            console.log("AtaManager: Calling onSuccessfulClose callback...");
-            if (onSuccessfulClose && typeof onSuccessfulClose === 'function') {
-                onSuccessfulClose();
-            }
-             // مسح القائمة المختارة بعد النجاح
-             setSelectedATAs([]);
-
+            if (onSuccessfulClose) onSuccessfulClose(true);
+            setSelectedATAs([]);
 
         } catch (error) {
-            // 10. معالجة الأخطاء
-            console.error("!!! AtaManager Error during close accounts process:", error);
-            let displayError = 'An error occurred during the closing process.';
-            if (axios.isAxiosError(error)) { displayError = `Network/Backend Error (${error.response?.status || 'N/A'}): ${error.response?.data?.error || error.message}`; }
-            else if (error.name === 'WalletSignTransactionError' || error.message.includes('rejected')) { displayError = `Wallet signing was rejected. Please approve the transaction in your wallet.`; }
-            else if (error.message.includes('Transaction confirmation failed')) { displayError = `Transaction failed on-chain. Signature: ${signature || 'N/A'}. Check explorer for details.`; }
-            else { displayError = `Error: ${error.message || 'Unknown error during close process.'}`; }
-            //setError(displayError);
-            toast.error(`Account Closing Failed: ${displayError}`); // <-- Toast خطأ
-            setLastSignature('');
+            toast.dismiss(toastConfirmId); // تأكد من إزالة إشعار التأكيد عند الخطأ أيضًا
+            console.error("!!! AtaManager Error during close accounts process:", {
+                message: error.message,
+                name: error.name,
+                currentAttemptSignature: localSignatureAttempt || "N/A"
+            });
 
+            let displayError = 'An error occurred during the closing process.';
+            const isAlreadyProcessedError = error.message && error.message.includes("This transaction has already been processed");
+            const isSimulationFailedButAlreadyProcessed = error.message && error.message.includes("Transaction simulation failed") && error.message.includes("already been processed");
+
+            if (isAlreadyProcessedError || isSimulationFailedButAlreadyProcessed) {
+                displayError = "Action seems complete or is processing. Refreshing data to reflect latest state...";
+                toast.info(displayError, { autoClose: 7000 });
+                if (onSuccessfulClose) onSuccessfulClose(true);
+                if (localSignatureAttempt) setLastSignature(localSignatureAttempt);
+                else setLastSignature('');
+            } else if (localSignatureAttempt && (error.message.includes("Transaction confirmation failed") || error.message.includes("could not be confirmed after"))) {
+                displayError = `Transaction (Sig: ${shortenAddress(localSignatureAttempt)}) failed to confirm after several attempts. It might process later. Please check an explorer. Refreshing local data.`;
+                toast.warn(displayError, { autoClose: 15000 });
+                setLastSignature(localSignatureAttempt);
+                if (onSuccessfulClose) onSuccessfulClose(false);
+            } else if (error.name === 'WalletSignTransactionError' || (error.message && error.message.toLowerCase().includes('user rejected'))) {
+                displayError = `Wallet signing was rejected. Please approve the transaction in your wallet.`;
+                toast.error(displayError);
+                setLastSignature('');
+            } else if (axios.isAxiosError(error)) {
+                displayError = `Network/Backend Error (${error.response?.status || 'N/A'}): ${error.response?.data?.error || error.message}`;
+                toast.error(displayError);
+                setLastSignature(localSignatureAttempt || '');
+            } else {
+                displayError = `Error: ${error.message || 'Unknown error during close process.'}`;
+                toast.error(displayError);
+                setLastSignature(localSignatureAttempt || '');
+            }
         } finally {
-            // 11. إنهاء حالة المعالجة دائمًا
             setIsProcessing(false);
-            console.log("AtaManager: Finished close accounts process.");
+            console.log("AtaManager: Finished close accounts process attempt.");
         }
     }, [
-        // الاعتماديات: كل ما يُستخدم داخل الدالة ويأتي من الخارج أو من الحالة
         publicKey, connection, connected, signTransaction, selectedATAs, isProcessing,
-        setError, setLastSignature, referrerFromUrl, onSuccessfulClose
+        setLastSignature, referrerFromUrl, onSuccessfulClose,
+        RENT_PER_EMPTY_ATA_SOL, PLATFORM_FEE_PERCENT
     ]);
 
-    // === العرض ===
 
-    // لا تعرض المكون إذا لم تكن المحفظة متصلة
     if (!connected || !publicKey) {
         return null;
     }
 
     return (
-        // استخدام الفئات العامة والفئات الخاصة بالمكون من ملف CSS Module
         <div className={`${styles.ataContainer} glass-effect container`}>
             <h2 className={`${styles.title} gradient-text-bold`}>Select Empty Accounts to Close</h2>
 
-            {/* عرض التحميل بناءً على الـ prop القادم من App */}
             {isLoadingAtas && <p className={styles.loadingText}>Scanning for accounts...</p>}
 
-            {/* عرض رسالة عدم وجود حسابات بناءً على القائمة المحدثة */}
             {!isLoadingAtas && emptyATAs.length === 0 && (
                 <p className={styles.noAtasText}>
                 Looks like you don't have any empty token accounts currently. Remember to check back after your trading sessions or token activities to recover any newly locked SOL rent.
             </p>
             )}
 
-            {/* عرض الأعمدة إذا كانت هناك حسابات */}
             {!isLoadingAtas && emptyATAs.length > 0 && (
                 <div className={styles.columnsWrapper}>
-                    {/* العمود الأيسر: الحسابات المتاحة */}
                     <div className={`${styles.column} ${styles.columnLeft}`}>
                         <div className={styles.listHeader}>
                             <h4 className={`${styles.listTitle} gradient-text-bold`}>
@@ -227,37 +303,39 @@ const AtaManager = ({
                             </h4>
                             <button
                                 onClick={handleSelectAll}
-                                disabled={availableATAs.length === 0 || isProcessing}
+                                disabled={availableATAs.length === 0 || isProcessing || selectedATAs.length >= MAX_SELECTION_LIMIT}
                                 className={styles.actionButton}
                             >
-                                Select All
+                                {availableATAs.length > MAX_SELECTION_LIMIT ? `Select ${MAX_SELECTION_LIMIT}` : 'Select All'}
                             </button>
+                            {selectedATAs.length >= MAX_SELECTION_LIMIT && (
+                                <p className={styles.selectionLimitText}>
+                                    Maximum selection of {MAX_SELECTION_LIMIT} accounts per transaction reached.
+                                </p>
+                            )}
                         </div>
-                        {/* قائمة الحسابات المتاحة */}
                         <ul className={styles.ataList}>
                             {availableATAs.map(ata => (
                                 <li key={`avail-${ata}`} className={styles.ataListItem}>
                                     <input
                                         type="checkbox"
-                                        checked={false} // دائمًا غير محدد بصريًا هنا
+                                        checked={false}
                                         onChange={() => handleCheckboxChange(ata)}
                                         id={`checkbox-available-${ata}`}
                                         className={styles.ataCheckbox}
-                                        disabled={isProcessing}
+                                        disabled={isProcessing || selectedATAs.length >= MAX_SELECTION_LIMIT}
                                     />
                                     <label htmlFor={`checkbox-available-${ata}`} className={styles.ataLabel}>
                                         {ata}
                                     </label>
                                 </li>
                             ))}
-                            {/* رسالة إذا كانت كل الحسابات مختارة */}
                             {availableATAs.length === 0 && selectedATAs.length > 0 && (
                                  <p style={{ textAlign: 'center', color: '#888', marginTop: '1rem' }}>All available accounts are selected.</p>
                             )}
                         </ul>
                     </div>
 
-                    {/* العمود الأيمن: الحسابات المختارة وزر Claim */}
                     <div className={styles.column}>
                         <div className={styles.listHeader}>
                              <h4 className={`${styles.listTitle} gradient-text-bold`}>
@@ -271,20 +349,17 @@ const AtaManager = ({
                                 Deselect All
                             </button>
                         </div>
-                        {/* زر الإغلاق */}
                          <button
                              className={styles.claimButton}
                              onClick={handleCloseAccounts}
-                             // تعطيل الزر عند التحميل أو المعالجة أو عدم اختيار حسابات
                              disabled={isLoadingAtas || isProcessing || selectedATAs.length === 0}
                          >
                              {isProcessing ? 'Processing...' : `Claim ~${netSolForSelected.toFixed(6)} SOL (${selectedATAs.length} Accs)`}
                          </button>
-                        {/* قائمة الحسابات المختارة */}
                         <ul className={styles.ataList} data-testid="selected-ata-list">
                             {selectedATAs.map(ata => (
                                 <li key={`selected-${ata}`} className={styles.ataListItem}>
-                                    <span className={styles.ataLabel}>{ata}</span>                                                        
+                                    <span className={styles.ataLabel}>{ata}</span>
                                     <button
                                         onClick={() => handleCheckboxChange(ata)}
                                         disabled={isProcessing}
@@ -296,7 +371,6 @@ const AtaManager = ({
                                     </button>
                                 </li>
                             ))}
-                            {/* رسالة عند عدم اختيار حسابات */}
                              {selectedATAs.length === 0 && (
                                  <p style={{ textAlign: 'center', color: '#888', marginTop: '1rem' }}>Select accounts from the left list to close.</p>
                              )}

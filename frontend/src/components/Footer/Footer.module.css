@@ -110,7 +110,10 @@
     width: 70px; /* حجم الشعار في الفوتر */
     height: auto;
     margin-bottom: 0.8rem;
+    filter: drop-shadow(0 0 10px rgba(135, 245, 255, 0.5));
 }
+
+
 
 .followText {
   color: #ccc;
@@ -120,16 +123,19 @@
   font-weight: bold;
 }
 
-.socialIcons {
-  
-  display: flex;
-  justify-content: center; /* توسيط الأيقونات */
-  gap: 1.5rem; /* مسافة بين الأيقونات */
+.socialIcon {
+  width: 40px; /* حجم أيقونات التواصل الاجتماعي (نفس حجم تويتر وتليجرام) */
+  height: 40px; /* تأكد من أن الارتفاع أيضًا محدد */
+  fill: #aaa; /* لون الأيقونة الافتراضي */
+  transition: fill 0.2s ease, transform 0.2s ease;
+  /* (اختياري) إذا كانت الأيقونة لا تزال كبيرة، يمكنك إضافة: */
+  /* display: block;  <-- قد يساعد في بعض الحالات */
+  /* object-fit: contain; <-- مفيد إذا كنت تستخدم عنصر <img>، لكن قد لا يؤثر على SVG المستورد كمكون */
 }
 
 .socialIcon {
-  width: 32px; /* حجم أيقونات التواصل الاجتماعي */
-  height: 32px;
+  width: 50px; /* حجم أيقونات التواصل الاجتماعي */
+  /*height: 32px;*/
   fill: #aaa; /* لون الأيقونة الافتراضي */
   transition: fill 0.2s ease, transform 0.2s ease;
 }
@@ -189,9 +195,26 @@
 
 /* (اختياري) أنماط الروابط الإضافية */
 .footerLinks {
-    margin-top: 10px;
-    font-size: 0.9em;
+  margin-top: 1rem;
+  margin-bottom: 1rem;
+  font-size: 0.95em;
 }
+.footerLinkItem {
+  color: #aabbcc; /* لون رمادي-أزرق فاتح */
+  text-decoration: none;
+  margin: 0 10px;
+  transition: color 0.2s ease;
+}
+.footerLinkItem:hover {
+  color: #e0e0e0;
+  text-decoration: underline;
+}
+
+.footerLinkSeparator {
+  color: #555; /* لون فاصل خافت */
+  margin: 0 5px;
+}
+
 .footerLinks a {
     color: #aaa;
     text-decoration: none;
@@ -201,6 +224,24 @@
 .footerLinks a:hover {
     color: #eee;
 }
+
+.blockDisplay {
+    display: block;
+    margin-bottom: 4px; /* مسافة صغيرة بين التسمية والعنوان */
+}
+
+/* حاوية للرابط للتحكم في word-break */
+.addressWrapper {
+    word-break: break-all; /* السماح بكسر العنوان إذا كان لا يزال طويلاً */
+    padding: 0 10px; /* إضافة حشو جانبي بسيط لمنع الالتصاق بالحواف */
+}
+
+.contractAddressLink {
+    /* ... (الأنماط الحالية للرابط) ... */
+    /* يمكننا تعديل حجم الخط هنا بشكل عام إذا أردنا */
+    font-size: 0.9em; 
+}
+
 /* تعديل التخطيط للشاشات الصغيرة */
 @media (max-width: 768px) {
     .infoLinksSection {
@@ -221,4 +262,20 @@
          /* width: auto; */ /* لم يعد ضروريًا مع inline-flex */
     }
      /* --- نهاية تعديل التوسيط --- */
+}
+/* === Media Query لتطبيق التغييرات على الموبايل === */
+@media (max-width: 480px) {
+    .contractInfo {
+        /* لا حاجة لتغيير كبير هنا لأن العناصر بالداخل أصبحت block */
+    }
+
+    .contractLabel {
+        /* يمكن تعديل حجم خط التسمية إذا أردت */
+        font-size: 0.95em;
+    }
+
+    .contractAddressLink {
+        /* تصغير حجم خط العنوان بشكل أكبر على الشاشات الصغيرة جدًا */
+        font-size: 0.8em; 
+    }
 }

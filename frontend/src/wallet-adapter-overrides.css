@@ -1,0 +1,37 @@
+/*
+ * wallet-adapter-overrides.css
+ * هذا الملف يحتوي على تعديلات لواجهة مكتبة المحافظ
+ */
+
+/* استهدف الشاشات التي عرضها 600 بكسل أو أقل (هواتف) */
+@media (max-width: 600px) {
+
+    /* الخطوة 1: إخفاء جميع عناصر قائمة المحافظ بشكل افتراضي */
+    .wallet-adapter-modal-list li {
+        display: none;
+    }
+
+    /* 
+     * الخطوة 2: إظهار عنصر "Mobile Wallet Adapter" فقط.
+     * نحن نستهدفه بناءً على محتواه النصي لأنه لا يملك معرفًا فريدًا.
+     * هذا الحل قد لا يكون مثاليًا ولكنه الأكثر فعالية لهذه المشكلة.
+     * نحن نفترض أن هذا الزر سيكون دائمًا هو العنصر الأول في القائمة على الموبايل.
+    */
+    .wallet-adapter-modal-list li:first-of-type {
+        display: block;
+    }
+
+    /* 
+     * (حل بديل وأكثر قوة إذا لم يعمل الحل الأول)
+     * إذا تغير ترتيب الأزرار، يمكنك استخدام هذا الكود بدلاً من الكود أعلاه.
+     * هذا الكود يخفي الأزرار التي تحتوي على أسماء محافظ معينة بالاسم.
+    */
+    
+    /*
+    .wallet-adapter-modal-list button[data-wallet-name="Phantom"],
+    .wallet-adapter-modal-list button[data-wallet-name="Solflare"],
+    .wallet-adapter-modal-list button[data-wallet-name="Trust"] {
+         display: none;
+    }
+    */
+}

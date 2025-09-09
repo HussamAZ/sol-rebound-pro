@@ -1,0 +1,302 @@
+/* frontend/src/components/LandingPage/LandingPage.module.css */
+
+.landingContainer {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 100vh; /* لجعلها تملأ الشاشة */
+    padding: 2rem;
+    text-align: center;
+    color: #e0e0e0; /* لون نص فاتح افتراضي */
+    /* الخلفية العامة ستأتي من index.css */
+    position: relative; /* لـ z-index إذا احتجت لتغطية عناصر الخلفية المتحركة */
+    z-index: 5; /* تأكد من أنها فوق الخلفية المتحركة ولكن تحت أي مودالات أخرى */
+  }
+  
+  .logoContainer {
+    margin-bottom: 1.5rem;
+  }
+  
+  .logo {
+    width: 120px; /* حجم الشعار */
+    height: auto;
+    /* يمكنك إضافة تأثيرات مثل ظل خفيف */
+    filter: drop-shadow(0 0 10px rgba(135, 245, 255, 0.5));
+  }
+  
+  .headline {
+    font-size: clamp(2.5rem, 8vw, 5rem); /* حجم خط متجاوب */
+    margin-bottom: 0.5rem;
+    letter-spacing: 1px;
+    text-shadow: 2px 2px 8px rgba(0, 0, 0, 0.7);
+  }
+  
+  .subHeadline {
+    font-size: clamp(1.3rem, 3vw, 1.3rem);
+    max-width: 700px;
+    line-height: 1.6;
+    margin-bottom: 2.5rem;
+    color: #c0c0c0;
+  }
+  
+  .subHeadline strong, .subHeadline .gradient-text-bold { /* استهداف النص العريض داخل النص الفرعي */
+    /* gradient-text-bold ستطبق الألوان */
+    font-weight: 900; /* تأكيد الوزن */
+  }
+  
+  .countdownContainer {
+    margin-bottom: 2.5rem;
+    background-color: rgba(21, 20, 36, 0.6); /* خلفية أغمق قليلاً للعداد */
+    padding: 1.5rem 2rem;
+    border-radius: 12px;
+    border: 1px solid rgba(247, 73, 253, 0.15);
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+    width: 100%;
+    max-width: 550px; /* عرض أقصى للعداد */
+  }
+  
+  .countdownTitle {
+    font-size: clamp(1.5rem, 4vw, 1.8rem); /* حجم عنوان عداد متجاوب */
+    margin-bottom: 1rem;
+    color: #ddfcb3;
+  }
+  
+  /* أنماط CountdownTimerLanding (مشابهة لـ CountdownTimer.module.css) */
+  .countdownDisplay {
+    display: flex;
+    justify-content: space-around; /* تغيير إلى space-around لتوزيع أفضل للمسافات */
+    align-items: baseline; /* محاذاة أفضل للكتل المختلفة الأحجام */
+    gap: 0.5rem; /* تقليل المسافة بين العناصر قليلاً */
+    flex-wrap: nowrap; /* **منع الالتفاف مبدئيًا، سنجعله يلتف في media query إذا لزم الأمر** */
+    width: 100%; /* اجعل العرض 100% من الحاوية الأب */
+  }
+  
+  .timeBlock {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    /* background-color: rgba(0, 0, 0, 0.2); */ /* لا حاجة لخلفية هنا لأن الحاوية لها خلفية */
+    padding: 8px 12px;
+    border-radius: 6px;
+    min-width: 70px;
+  }
+  
+  .timeValue {
+    font-size: clamp(2em, 6vw, 3em);
+    font-weight: bold;
+    color: #fff;
+    line-height: 1;
+  }
+  
+  .timeLabel {
+    font-size: 0.85em;
+    color: #ddfcb3;
+    text-transform: uppercase;
+    margin-top: 5px;
+  }
+  
+  .separator {
+    font-size: clamp(1.8em, 5vw, 2.5em);
+    font-weight: bold;
+    color: #ddfcb3;
+    align-self: center;
+    padding-bottom: 15px; /* لضبط المحاذاة مع الأرقام */
+  }
+  
+  .timerEnded {
+    font-size: 1.5rem;
+    color: #93fc8b; /* أخضر للإشارة إلى الإطلاق */
+    font-weight: bold;
+  }
+  
+  
+  .ctaContainer {
+    margin-bottom: 2rem;
+  }
+  
+  .ctaButton {
+    display: inline-flex; /* لمواءمة الأيقونة مع النص */
+    align-items: center;
+    justify-content: center;
+    padding: 15px 30px;
+    font-size: clamp(1.1rem, 3.5vw, 1.4rem);
+    font-weight: bold;
+    color: #ffffff;
+    background: linear-gradient(135deg, #a77ef4, #7b1fa2); /* تدرج بنفسجي جذاب */
+    border: none;
+    border-radius: 50px; /* حواف دائرية جدًا */
+    text-decoration: none;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    box-shadow: 0 5px 15px rgba(123, 31, 162, 0.4);
+    margin-bottom: 0.8rem;
+  }
+  
+  .ctaButton:hover {
+    background: linear-gradient(135deg, #7b1fa2, #a77ef4);
+    transform: translateY(-3px) scale(1.03);
+    box-shadow: 0 8px 20px rgba(123, 31, 162, 0.5);
+  }
+  
+  .ctaIcon {
+    width: 24px; /* حجم أيقونة تيليجرام */
+    height: 24px;
+    margin-right: 10px;
+    fill: #ffffff; /* لون الأيقونة */
+  }
+  
+  .giveawayTeaser {
+    font-size: 1.3rem;
+    color: #b0b0b0;
+  }
+  
+  .giveawayTeaser strong {
+    font-weight: 800;
+    /* سيتم تطبيق gradient-text-bold من الفئة العامة */
+  }
+  
+  .landingFooter {
+    position: absolute;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 1rem;
+    font-weight: 600;
+    color: rgba(224, 224, 224, 0.7);
+  }
+ /* --- أنماط إشعار التأجيل --- */
+.delayNotification {
+  background-color: rgba(255, 239, 186, 0.9); /* خلفية صفراء فاتحة شبه شفافة */
+  color: #533f00; /* لون نص داكن */
+  border: 2px solid #ffc107; /* حد برتقالي/أصفر */
+  border-radius: 12px;
+  padding: 1.2rem 1.8rem;
+  margin: 0 auto 2rem auto; /* هامش علوي وسفلي، وتوسيط */
+  max-width: 650px; /* عرض مناسب للإشعار */
+  width: 90%;
+  text-align: center;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+  z-index: 10; /* لضمان ظهوره فوق عناصر أخرى إذا تداخلت */
+}
+
+.delayTitle {
+  font-size: clamp(1.3rem, 3.5vw, 1.7rem);
+  color: #bf6900; /* لون عنوان برتقالي داكن */
+  margin-top: 0;
+  margin-bottom: 0.8rem;
+}
+
+.delayMessage {
+  font-size: clamp(0.95rem, 2.5vw, 1.1rem);
+  line-height: 1.6;
+  margin-bottom: 0;
+}
+
+.delayMessage strong, .delayMessage .gradient-text-bold {
+  font-weight: 700;
+  /* يمكن تطبيق gradient-text-bold مباشرة إذا كان موجودًا كفئة عامة */
+  /* أو يمكنك تحديد لون خاص هنا إذا أردت */
+  color: #d97706; /* لون برتقالي أغمق للتأكيد */
+}
+
+/* تعديل لأنماط العداد إذا كان موجودًا بالفعل ليناسب العنوان الجديد */
+.countdownTitle { /* تعديل العنوان الحالي إذا كان لديك */
+  font-size: clamp(1.5rem, 4vw, 1.8rem);
+  margin-bottom: 1rem;
+  color: #ddfcb3;
+}
+ 
+  /* Media queries لتعديل التخطيط على الشاشات الصغيرة */
+  @media (max-width: 768px) {
+    .headline {
+      letter-spacing: 0.5px;
+    }
+    .countdownDisplay {
+    gap: 0.6rem; /* تقليل المسافة قليلاً */
+    }
+    .subHeadline {
+      padding: 0 1rem; /* حشو جانبي للنص الفرعي */
+    }
+    .countdownContainer {
+      padding: 1rem 1.2rem;
+      max-width: 90%; /* اسمح له بالتمدد أكثر */
+    }
+    .countdownTitle {
+       margin-bottom: 0.8rem;
+    }
+    .ctaButton {
+      padding: 12px 25px;
+    }
+    .timeValue {
+      font-size: clamp(1.7em, 6.5vw, 2.6em);
+    }
+    .timeLabel {
+      font-size: clamp(0.6em, 1.8vw, 0.75em);
+    }
+    .separator {
+      font-size: clamp(1.4em, 5.5vw, 2em);
+    }	
+  }
+
+  
+@media (max-width: 480px) {
+  .logo {
+    width: 70px;
+  }
+  .headline {
+     font-size: clamp(1.8rem, 6vw, 3rem); /* تصغير إضافي */
+  }
+  .subHeadline {
+    font-size: clamp(0.75rem, 2.8vw, 0.95rem);
+  }
+  .countdownContainer {
+    padding: 0.7rem 0.8rem;
+    max-width: 100%; /* اسمح له بأخذ عرض الشاشة تقريبًا */
+  }
+  .countdownTitle {
+    font-size: clamp(1.2rem, 3.5vw, 1.5rem);
+    margin-bottom: 0.6rem;
+  }
+  .countdownDisplay {
+    gap: 0.2rem; /* تقليل المسافة بشكل كبير */
+    justify-content: space-between; /* جرب space-between لدفع العناصر للحواف */
+    align-items: center; /* محاذاة رأسية أفضل */
+  }
+  .timeBlock {
+    padding: 2px 1px; /* تقليل الحشو بشكل كبير جدًا */
+    flex-basis: auto; /* اسمح للعنصر بتحديد عرضه الأدنى */
+    flex-grow: 0;   /* لا تجعله يتمدد بشكل كبير */
+  }
+  .timeValue {
+    font-size: clamp(1.3em, 6vw, 1.9em); /* تصغير كبير للخط */
+    min-width: 30px; /* عرض أدنى لضمان عدم انهيار الأرقام الصغيرة جدًا */
+    white-space: nowrap; /* منع التفاف الرقم */
+  }
+  .timeLabel {
+    font-size: clamp(0.5em, 2vw, 0.6em); /* تصغير كبير للخط */
+    margin-top: 1px;
+    white-space: nowrap; /* منع التفاف النص */
+  }
+  .separator {
+    font-size: clamp(1em, 5vw, 1.5em); /* تصغير كبير للخط */
+    padding: 0 1px; /* تقليل الحشو للفواصل */
+    line-height: 1; /* لتقريبها من الأرقام */
+  }
+  .ctaButton {
+     font-size: clamp(0.85rem, 2.8vw, 1.05rem);
+     padding: 10px 18px;
+  }
+  .landingFooter {
+    font-size: 0.7rem;
+    bottom: 5px;
+  }
+}
+
+  @media (max-width: 380px) {
+    .countdownDisplay {
+      /* هنا قد نحتاج للسماح بالالتفاف أو تقليل حجم الخط بشكل كبير */
+      flex-wrap: wrap;  /* إذا أردت أن يلتف ويظهر كل عنصر في سطر */
+      justify-content: center;
+    }
+  }

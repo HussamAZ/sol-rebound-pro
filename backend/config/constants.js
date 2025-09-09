@@ -2,13 +2,20 @@
 const { PublicKey } = require('@solana/web3.js');
 
 // تأكد من صحة هذه المفاتيح!
-const TREASURY_PUBLIC_KEY_STRING = "C3uyWqqRZ8brjHTPZYacxrHfvZYNQjUnza3a9Kui7R2r";
-const FINAL_STORAGE_PUBLIC_KEY_STRING = "6Azd4Fyc5jqbQQRLiNRHfnECjCRcgd6yPr1uXk56NK5s";
-const PROGRAM_ID_STRING = '8RzqAPhqTcGd48DxErKV3PNsvZA7ogxXGwbar6oPhPnW';
-const ADMIN_AUTHORITY_STRING = "2UrhEmCmL7BUheGdECDePZFB24mPbipqYXk2wPqbXa6f"; // لسلطة توزيع المكافآت
-
+const TREASURY_PUBLIC_KEY_STRING = "B6PpU6WoxRBZoRdxUD5vnCf81gN4r41CqfTcSrrKz76J";
+const FINAL_STORAGE_PUBLIC_KEY_STRING = "D33Fq515YV2VVKSK8PT6FA2UwhuVsDStfSGGD49uT7qn";
+const PROGRAM_ID_STRING = '41cnmpptdc7sfxsEBw7rwyAMqwZLuV5KjQyC6SR4JW9Y';
+const ADMIN_AUTHORITY_STRING = "Efvn5iPUGpbH1qnDT7MtTEWnYtpmvicLUWDkfoAcSa53";
 const TOKEN_PROGRAM_ID = new PublicKey('TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA');
 const SYSTEM_PROGRAM_ID = new PublicKey('11111111111111111111111111111111');
+// --- Launch Contest Constants ---
+    // وقت الإطلاق الفعلي سيتم قراءته من ملف، هذا فقط كمرجع أو حد أدنى
+const LAUNCH_CONTEST_PLANNED_START_DATETIME_UTC = "2025-06-12T21:00:00Z";
+const LAUNCH_CONTEST_EARNINGS_DURATION_HOURS = 24;
+const MAX_LAUNCH_CONTEST_WINNERS = 105; // تم تحديثه من 100
+const LAUNCH_CONTEST_REWARD_PERCENT = 10;
+const GOOGLE_FORM_LINK_FOR_CONTEST ="https://docs.google.com/forms/d/e/1FAIpQLSe9qlpZqUk62iVTtIrqbDOup2YY_6ipUWxNQXRDm5gyLQTKsg/viewform?usp=header";
+const EXPLORER_CLUSTER_PARAM_MAINNET = "?cluster=mainnet-beta"; // لنقل المعاملات على Mainnet
 
 // النسب المالية
 const RENT_PER_EMPTY_ATA_LAMPORTS = 2039280;
@@ -23,6 +30,7 @@ const MIN_REFERRAL_WITHDRAW_SOL = 0.05;
 const LAMPORTS_PER_SOL = 1000000000;
 const DEFAULT_TX_FEE_LAMPORTS = 5000;
 const TARGET_HOT_WALLET_BALANCE_SOL = 2; // مثال لتمويل المحفظة الساخنة
+const RENT_EXEMPT_RESERVE_LAMPORTS = 890880; // الحد الأدنى التقريبي لحساب عادي
 
 module.exports = {
     TREASURY_PUBLIC_KEY_STRING,
@@ -41,4 +49,12 @@ module.exports = {
     LAMPORTS_PER_SOL,
     DEFAULT_TX_FEE_LAMPORTS,
     TARGET_HOT_WALLET_BALANCE_SOL,
+    // --- Export Launch Contest Constants ---
+    LAUNCH_CONTEST_PLANNED_START_DATETIME_UTC,
+    LAUNCH_CONTEST_EARNINGS_DURATION_HOURS, // <-- تأكد من تصدير هذا
+    MAX_LAUNCH_CONTEST_WINNERS,
+    LAUNCH_CONTEST_REWARD_PERCENT,
+    GOOGLE_FORM_LINK_FOR_CONTEST,
+    EXPLORER_CLUSTER_PARAM_MAINNET,
+    RENT_EXEMPT_RESERVE_LAMPORTS,
 };

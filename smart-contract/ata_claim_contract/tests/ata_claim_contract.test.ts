@@ -9,7 +9,7 @@ const { BN } = anchor; // <-- الوصول لـ BN من الكائن المست�
 import type { Program as ProgramType, Wallet as WalletType, BN as BNType } from "@coral-xyz/anchor";
 
 // استيراد النوع الرئيسي للبرنامج (يبقى كما هو)
-import { AtaClaim } from "../target/types/ata_claim.js";
+import { AtaClaim } from "../target/types/ata_claim_contract.ts";
 
 // استيراد باقي المكتبات (spl-token, chai, etc.)
 import { LAMPORTS_PER_SOL, SystemProgram, PublicKey, Connection, Transaction, Keypair } from "@solana/web3.js";
@@ -21,7 +21,8 @@ import {
   mintTo,
 } from "@solana/spl-token";
 import { expect } from "chai"; // استخدام expect من chai
-
+import { AtaClaimContract } from "../target/types/ata_claim_contract";
+const program = anchor.workspace.AtaClaimContract as Program<AtaClaimContract>;
 
 // --- الثوابت (كما في العقد) ---
 const RENT_PER_EMPTY_ATA_BN = new BN(2039280); // استخدام BN للاتساق
@@ -29,7 +30,7 @@ const PLATFORM_FEE_PERCENT = new BN(25);
 const REFERRAL_COMMISSION_PERCENT = new BN(25);
 
 let authorityKeypair: Keypair;
-const authorityKeypairPath = "D:/MySecureKeys/Solana/contract-authority.json";
+const authorityKeypairPath = "/mnt/d/smart/admin-authority-wallet-secret.json";
 try {
     const authoritySecretKeyString = fs.readFileSync(authorityKeypairPath, 'utf-8');
     const authoritySecretKey = Uint8Array.from(JSON.parse(authoritySecretKeyString));

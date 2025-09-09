@@ -174,7 +174,15 @@
   transform: none;
   border-color: #444; /* تغيير لون الحد عند التعطيل */
 }
-
+.selectionLimitText {
+  font-size: 0.85em;
+  color: #ffcc00;
+  text-align: center;
+  margin-top: 10px;
+  padding: 5px;
+  background-color: rgba(255, 204, 0, 0.1);
+  border-radius: 4px;
+}
 /* Media query لتعديل زر الإغلاق على الشاشات الصغيرة جدًا */
 @media (max-width: 480px) {
  .claimButton {
@@ -182,3 +190,4 @@
     /* margin-top: 50px; */
   }
 }
+

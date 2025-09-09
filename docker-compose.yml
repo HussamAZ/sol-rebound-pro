@@ -1,9 +1,26 @@
-# D:\sol rebound pro\docker-compose.yml (مع تصحيح command لـ vault)
-# version: '3'
+# /home/hussamaz/sol-rebound/docker-compose.yml
+
 
 services:
+  mongo:
+    image: mongo:latest
+    container_name: sol-rebound-mongo-1
+    restart: unless-stopped # أنصح باستخدام unless-stopped بدلاً من on-failure لمزيد من القوة
+    ports:
+      - "127.0.0.1:27017:27017" # <--- **هذا هو التعديل الحاسم**
+    volumes:
+      # --- هذا هو الحل الصحيح والآمن ---
+      - /home/hussamaz/sol-rebound-data/mongo:/data/db
+    healthcheck:
+      test: ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
   vault:
-    image: hashicorp/vault:latest # أو إصدار محدد مثل 1.15.6
+    image: hashicorp/vault:latest
+    container_name: sol-rebound-vault
+    restart: unless-stopped
     ports:
       - "8200:8200"
     environment:
@@ -11,105 +28,83 @@ services:
     cap_add:
       - IPC_LOCK
     volumes:
-      - vault_data:/vault/data
+      - /home/hussamaz/sol-rebound-data/vault:/vault/data
       - ./vault-config.hcl:/vault/config/vault-config.hcl
-    # --- تصحيح تعريف الأمر والوسائط ---
     command: >
       sh -c "sleep 5 && vault server -config=/vault/config/vault-config.hcl"
-    # ----------------------------------
     healthcheck:
       test: ["CMD", "vault", "status", "-address=http://127.0.0.1:8200"]
       interval: 10s
       timeout: 5s
-      retries: 12
-      start_period: 30s
-
-  mongo:
-    image: mongo:latest
-    ports:
-      - "27017:27017"
-    volumes:
-      - mongo_data:/data/db
-    healthcheck:
-      test: |
-        mongosh --host localhost --port 27017 --eval "try { db.adminCommand('ping') } catch (e) { print(e); quit(1); }" --quiet || exit 1
-      interval: 10s
-      timeout: 10s
       retries: 5
-      start_period: 15s
-
-  prometheus:
-    image: prom/prometheus:latest
-    ports:
-      - "9090:9090"
-    volumes:
-      - ./prometheus.yml:/etc/prometheus/prometheus.yml
-    command:
-      - '--config.file=/etc/prometheus/prometheus.yml'
-    healthcheck:
-      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:9090/-/healthy"]
-      interval: 5s
-      timeout: 3s
-      retries: 3
-    depends_on:
-      - backend
-
-  grafana:
-    image: grafana/grafana:latest
-    ports:
-      - "3003:3000"
-    environment:
-      GF_SECURITY_ADMIN_PASSWORD: "admin" # أو ${GRAFANA_ADMIN_PASSWORD:-admin}
-    volumes:
-      - grafana_data:/var/lib/grafana
-    depends_on:
-      prometheus:
-        condition: service_started
-    healthcheck:
-      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:3000/api/health"]
-      interval: 10s
-      timeout: 5s
-      retries: 3
-      start_period: 10s
 
   backend:
     build: ./backend
+    container_name: sol-rebound-backend
     ports:
       - "3001:3001"
-    environment:
-      # تمرير المتغيرات المطلوبة من ملف .env الجذري
-      NODE_ENV: ${NODE_ENV:-development} # جيد لتحديد البيئة
-      RPC_URL: ${RPC_URL}
-      VAULT_ADDR: ${VAULT_ADDR:-http://vault:8200} # تأكد من تعريف هذا في .env الجذري أيضًا
-      VAULT_ROLE_ID: ${VAULT_ROLE_ID}
-      VAULT_SECRET_ID: ${VAULT_SECRET_ID}
-      MONGO_URI: ${MONGO_URI:-mongodb://mongo:27017/referralDB} # يمكنك تمريره من هنا أيضًا
-      PROGRAM_ID: ${PROGRAM_ID:-Gn9ixPConyzFX9g9dZpCZGE7515337MMuW9sEXsG3CxJ} # تمرير معرف البرنامج إذا احتجت إليه مباشرة
-      TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN} # تمرير توكن تيليجرام
-      TELEGRAM_CHANNEL_ID: ${TELEGRAM_CHANNEL_ID} # تمرير معرف القناة
-      # ENCRYPTION_KEY: ${ENCRYPTION_KEY} # تمرير مفتاح التشفير إذا كان مستخدمًا
-    # --- نهاية قسم environment ---
-
-    # يعتمد على .env الجذري
+    env_file:
+      - .env
     depends_on:
       vault:
         condition: service_healthy
       mongo:
         condition: service_healthy
-  frontend: # <-- الخدمة الجديدة
-    build: ./frontend # المسار إلى مجلد الواجهة الأمامية
+    restart: unless-stopped
+
+  frontend:
+    build: ./frontend
+    container_name: sol-rebound-frontend
     ports:
-      # ربط منفذ جهازك المضيف (3000) بمنفذ الحاوية (80 الذي يستمع إليه Nginx)
-      - "3000:80"
-    environment:
-      # هذا لا يزال صحيحًا للواجهة
-      REACT_APP_API_BASE_URL: http://backend:3001  
+      - "80:80"
+      - "443:443"
+    volumes:
+      - /var/www/letsencrypt:/var/www/letsencrypt:ro
+      - /etc/letsencrypt:/etc/letsencrypt:ro
     depends_on:
-      - backend # (اختياري) قد تنتظر بدء الـ backend، لكنها ستخدم الملفات الثابتة مباشرة
-    # لا تحتاج لـ environment هنا عادةً إلا إذا مررت متغيرات وقت البناء
-    # environment:
-    #   - REACT_APP_API_BASE_URL=http://backend:3001 # مثال إذا استخدمت هذا المتغير
+      backend:
+        condition: service_started
+    restart: unless-stopped
+
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: sol-rebound-prometheus
+    restart: unless-stopped
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml
+    command:
+      - "--config.file=/etc/prometheus/prometheus.yml"
+    depends_on:
+      - backend
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:9090/-/healthy"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+
+  grafana:
+    image: grafana/grafana:latest
+    container_name: sol-rebound-grafana
+    restart: unless-stopped
+    ports:
+      - "3003:3000"
+    environment:
+      GF_SECURITY_ADMIN_PASSWORD: "${GF_SECURITY_ADMIN_PASSWORD}" # تأكد من أن اسم المتغير في ملف .env هو GF_SECURITY_ADMIN_PASSWORD وليس GF_ADMIN_PASSWORD
+    volumes:
+      - grafana_data:/var/lib/grafana
+    depends_on:
+      prometheus:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:3000/api/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+
 volumes:
-  vault_data:
-  mongo_data:
+  # لم نعد بحاجة لتعريف mongo_data هنا
   grafana_data:
+    driver: local
+

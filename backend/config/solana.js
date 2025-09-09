@@ -25,12 +25,23 @@ let adminAuthorityPublicKey; // المفتاح العام لسلطة الإدا�
 async function loadKeypairFromVault(vaultInstance, secretPath, walletName) {
     console.log(`Attempting to read secret from Vault for ${walletName} at path: ${secretPath}`);
     const secret = await vaultInstance.read(secretPath);
-
-    if (!secret || !secret.data || !secret.data.data || typeof secret.data.data.secretKey === 'undefined') {
-        throw new Error(`Invalid secret structure received from Vault for ${walletName} at ${secretPath}. Expected 'secretKey' field.`);
+	//console.log(`Vault raw response for ${walletName} at ${secretPath}:`, JSON.stringify(secret, null, 2));
+   // if (!secret || !secret.data || !secret.data.data || typeof secret.data.data.secretKey === 'undefined') {
+   //     throw new Error(`Invalid secret structure received from Vault for ${walletName} at ${secretPath}. Expected 'privateKey' field.`);
+   // }
+	if (!secret || !secret.data || !secret.data.data) {
+        // هذا يعني أن الاستجابة من Vault فارغة أو لا تحتوي على .data.data المتوقع
+        console.error(`Vault response for ${walletName} is missing 'secret.data.data'. Full response:`, JSON.stringify(secret, null, 2));
+        throw new Error(`No data found in Vault secret for ${walletName} at ${secretPath}. Check Vault logs or path.`);
     }
 
-    const secretKeyValueFromVault = secret.data.data.secretKey;
+    // الآن تحقق من وجود privateKey
+    if (typeof secret.data.data.privateKey === 'undefined') {
+        console.error(`'privateKey' field is undefined in Vault secret for ${walletName}. Data received:`, JSON.stringify(secret.data.data, null, 2));
+        throw new Error(`'privateKey' field is missing in Vault secret for ${walletName} at ${secretPath}. Expected 'privateKey' field.`);
+    }
+
+    const secretKeyValueFromVault = secret.data.data.privateKey;
     let secretKeyArray;
 
     if (typeof secretKeyValueFromVault === 'string') {
@@ -56,7 +67,7 @@ async function loadKeypairFromVault(vaultInstance, secretPath, walletName) {
         throw new Error(`Incorrect secret key size for ${walletName} after Uint8Array.from. Expected 64, got ${secretKeyUint8.length}. Ensure the full 64-byte secret (private + public part) is stored.`);
     }
     const keypair = Keypair.fromSecretKey(secretKeyUint8);
-    console.log(`${walletName} loaded successfully from Vault. Public Key: ${keypair.publicKey.toBase58()}`);
+    console.log(`${walletName} loaded successfully from Vault.`);
     return keypair;
 }
 
@@ -104,13 +115,13 @@ async function initializeSolana() {
     }
 
     // --- 3. تهيئة الاتصال (كما كانت) ---
-    const rpcUrl = process.env.RPC_URL || 'https://api.devnet.solana.com';
+    const rpcUrl = process.env.RPC_URL;
     connection = new Connection(rpcUrl, 'confirmed');
     console.log(`Solana connection initialized to: ${rpcUrl}`);
 
     // --- 4. تحميل IDL (كما كان) ---
     try {
-        const idlPath = path.resolve(__dirname, '../ata_claim.json');
+        const idlPath = path.resolve(__dirname, '../ata_claim_contract.json');
         if (!fs.existsSync(idlPath)) { throw new Error(`IDL file not found at path: ${idlPath}`); }
         idl = JSON.parse(fs.readFileSync(idlPath, 'utf8'));
         console.log("IDL loaded successfully.");
@@ -138,9 +149,9 @@ async function initializeSolana() {
     let secret;
     try {
         // تحميل المفاتيح الخاصة من Vault
-        serverWalletKeypair = await loadKeypairFromVault(vaultInstance, 'secret/data/server-hot-wallet', 'Server Hot Wallet');
-        mainTreasuryKeypair = await loadKeypairFromVault(vaultInstance, 'secret/data/main-treasury-wallet', 'Main Treasury Wallet');
-        adminAuthorityKeypair = await loadKeypairFromVault(vaultInstance, 'secret/data/admin-authority-wallet', 'Admin Authority Wallet');
+        serverWalletKeypair = await loadKeypairFromVault(vaultInstance, 'secret/data/solana/server-hot-wallet', 'Server Hot Wallet');
+        mainTreasuryKeypair = await loadKeypairFromVault(vaultInstance, 'secret/data/solana/main_treasury_mainnet', 'Main Treasury Wallet');
+        adminAuthorityKeypair = await loadKeypairFromVault(vaultInstance, 'secret/data/solana/admin_authority_mainnet', 'Admin Authority Wallet');
 
         // *** تحقق إضافي: تأكد أن المفاتيح العامة المشتقة من المفاتيح الخاصة في Vault تطابق العناوين في constants.js ***
         if (!mainTreasuryKeypair.publicKey.equals(treasuryPublicKey)) {

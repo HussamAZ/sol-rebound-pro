@@ -1,13 +1,9 @@
 {
-  "address": "8RzqAPhqTcGd48DxErKV3PNsvZA7ogxXGwbar6oPhPnW",
-  "metadata": {
-    "name": "ata_claim",
-    "version": "0.1.0",
-    "spec": "0.1.0"
-  },
+  "version": "0.1.0",
+  "name": "ata_claim_contract",
   "instructions": [
     {
-      "name": "close_multiple_atas",
+      "name": "closeMultipleAtas",
       "docs": [
         "Closes multiple empty Associated Token Accounts (ATAs) for the user,",
         "recovers the rent lamports, transfers a platform fee to the treasury,",
@@ -17,68 +13,54 @@
         "- The ATAs to be closed (must be writable, owned by token_program, belong to the user, and be empty).",
         "- If `referrer_key` argument is Some(key), the account corresponding to `key` must also be present and writable."
       ],
-      "discriminator": [
-        194,
-        122,
-        68,
-        116,
-        143,
-        165,
-        99,
-        94
-      ],
       "accounts": [
         {
           "name": "user",
-          "writable": true,
-          "signer": true
+          "isMut": true,
+          "isSigner": true
         },
         {
           "name": "treasury",
-          "writable": true
+          "isMut": true,
+          "isSigner": false
         },
         {
-          "name": "token_program",
-          "address": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"
+          "name": "tokenProgram",
+          "isMut": false,
+          "isSigner": false
         },
         {
-          "name": "system_program",
-          "address": "11111111111111111111111111111111"
+          "name": "systemProgram",
+          "isMut": false,
+          "isSigner": false
         }
       ],
       "args": [
         {
-          "name": "referrer_key",
+          "name": "referrerKey",
           "type": {
-            "option": "pubkey"
+            "option": "publicKey"
           }
         }
       ]
     },
     {
-      "name": "distribute_rewards",
-      "discriminator": [
-        97,
-        6,
-        227,
-        255,
-        124,
-        165,
-        3,
-        148
-      ],
+      "name": "distributeRewards",
       "accounts": [
         {
           "name": "treasury",
-          "writable": true
+          "isMut": true,
+          "isSigner": false
         },
         {
           "name": "authority",
-          "signer": true
+          "isMut": false,
+          "isSigner": true
         },
         {
-          "name": "system_program",
-          "address": "11111111111111111111111111111111"
+          "name": "systemProgram",
+          "isMut": false,
+          "isSigner": false
         }
       ],
       "args": [
